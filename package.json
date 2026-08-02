@@ -1,0 +1,25 @@
+{
+  "name": "gestor_projetos",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "scripts": {
+    "dev:front": "vite",
+    "dev:back": "npm --prefix backend run start:dev",
+    "build:front": "tsc -b && vite build",
+    "build:back": "npm --prefix backend run build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "latest",
+    "lucide-react": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "vite": "latest"
+  },
+  "devDependencies": {
+    "typescript": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest"
+  }
+}
