@@ -8,7 +8,8 @@
     "build": "tsc -p tsconfig.json",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:seed": "tsx prisma/seed.ts"
+    "prisma:seed": "tsx prisma/seed.ts",
+    "prisma:migrate:deploy": "prisma migrate deploy"
   },
   "dependencies": {
     "@nestjs/common": "latest",
@@ -20,6 +21,7 @@
     "class-transformer": "latest",
     "class-validator": "latest",
     "dotenv": "latest",
+    "helmet": "latest",
     "reflect-metadata": "latest",
     "rxjs": "latest"
   },
