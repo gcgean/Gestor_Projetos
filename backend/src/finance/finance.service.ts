@@ -29,6 +29,18 @@ export class FinanceService {
     return { ...row, amount: Number(row.amount) }
   }
 
+  async deleteRevenue(ownerId: string, id: string) {
+    const result = await this.prisma.revenue.deleteMany({ where: { id, project: { ownerId } } })
+    if (!result.count) throw new NotFoundException('Receita não encontrada')
+    return { deleted: true }
+  }
+
+  async deleteExpense(ownerId: string, id: string) {
+    const result = await this.prisma.expense.deleteMany({ where: { id, project: { ownerId } } })
+    if (!result.count) throw new NotFoundException('Despesa não encontrada')
+    return { deleted: true }
+  }
+
   private async ensureProject(ownerId: string, projectId: string) {
     const project = await this.prisma.project.findFirst({ where: { id: projectId, ownerId }, select: { id: true } })
     if (!project) throw new NotFoundException('Projeto não encontrado')

@@ -39,4 +39,6 @@ export const api = {
   expenses: () => request<ApiFinanceEntry[]>('/finance/expenses'),
   createRevenue: (data: { projectId: string; category: string; description?: string; amount: number; competence: string; receivedAt?: string }) => request<ApiFinanceEntry>('/finance/revenues', { method: 'POST', body: JSON.stringify(data) }),
   createExpense: (data: { projectId: string; category: string; description?: string; amount: number; competence: string; dueDate?: string }) => request<ApiFinanceEntry>('/finance/expenses', { method: 'POST', body: JSON.stringify(data) }),
+  deleteRevenue: (id: string) => request<{ deleted: boolean }>(`/finance/revenues/${id}`, { method: 'DELETE' }),
+  deleteExpense: (id: string) => request<{ deleted: boolean }>(`/finance/expenses/${id}`, { method: 'DELETE' }),
 }
