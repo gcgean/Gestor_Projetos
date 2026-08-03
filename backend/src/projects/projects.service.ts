@@ -17,5 +17,15 @@ export class ProjectsService {
       return { ...project, revenue, expense, margin: revenue ? ((revenue - expense) / revenue) * 100 : 0 }
     }))
   }
+  async update(ownerId: string, id: string, data: { name?: string; type?: string; status?: any; color?: string; description?: string }) {
+    const result = await this.prisma.project.updateMany({ where: { id, ownerId }, data })
+    if (!result.count) throw new Error('Projeto não encontrado')
+    return this.prisma.project.findUnique({ where: { id } })
+  }
+  async remove(ownerId: string, id: string) {
+    const result = await this.prisma.project.deleteMany({ where: { id, ownerId } })
+    if (!result.count) throw new Error('Projeto não encontrado')
+    return { deleted: true }
+  }
   create(ownerId: string, data: { name: string; type: string; status?: any; color?: string; description?: string }) { return this.prisma.project.create({ data: { ...data, ownerId } }) }
 }
