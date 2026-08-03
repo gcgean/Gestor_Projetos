@@ -1,0 +1,25 @@
+import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common'
+import { IsISO8601, IsNumber, IsOptional, IsString, Min, MinLength } from 'class-validator'
+import { JwtGuard } from '../auth/jwt.guard'
+import { FinanceService } from './finance.service'
+
+class CreateFinanceDto {
+  @IsString() projectId = ''
+  @IsString() @MinLength(2) category = ''
+  @IsOptional() @IsString() description?: string
+  @IsNumber() @Min(0.01) amount = 0
+  @IsISO8601() competence = ''
+  @IsOptional() @IsISO8601() receivedAt?: string
+  @IsOptional() @IsISO8601() dueDate?: string
+}
+
+@Controller('finance')
+@UseGuards(JwtGuard)
+export class FinanceController {
+  constructor(private readonly finance: FinanceService) {}
+
+  @Get('revenues') revenues(@Req() req: any) { return this.finance.revenues(req.user.sub) }
+  @Post('revenues') createRevenue(@Req() req: any, @Body() dto: CreateFinanceDto) { return this.finance.createRevenue(req.user.sub, dto) }
+  @Get('expenses') expenses(@Req() req: any) { return this.finance.expenses(req.user.sub) }
+  @Post('expenses') createExpense(@Req() req: any, @Body() dto: CreateFinanceDto) { return this.finance.createExpense(req.user.sub, dto) }
+}

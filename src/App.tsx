@@ -5,7 +5,7 @@ import {
   FileText, FolderKanban, Gauge, Grid2X2, HelpCircle, Lightbulb, MoreHorizontal,
   Plus, Search, Settings2, ShieldAlert, Sparkles, Sun, Target, WalletCards, X,
 } from 'lucide-react'
-import { api, ApiProject } from './services/api'
+import { api, ApiFinanceEntry, ApiProject } from './services/api'
 
 type Summary = { projects: number; revenue: number; expense: number; profit: number; roi: number }
 
@@ -34,6 +34,39 @@ function Kpi({ label, value, change, positive, icon: Icon }: { label: string; va
     <div className="kpi-value">{value}</div>
     {change && <div className={positive ? 'trend positive' : 'trend negative'}>{positive ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />} {change}</div>}
   </article>
+}
+
+function FinancePage({ kind, projects }: { kind: 'revenue' | 'expense'; projects: ApiProject[] }) {
+  const [entries, setEntries] = useState<ApiFinanceEntry[]>([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [showForm, setShowForm] = useState(false)
+  const [error, setError] = useState('')
+  const [form, setForm] = useState({ projectId: '', category: '', description: '', amount: '', competence: new Date().toISOString().slice(0, 10), settlementDate: '' })
+  const label = kind === 'revenue' ? 'receita' : 'despesa'
+
+  const loadEntries = useCallback(async () => {
+    setLoading(true)
+    try { setEntries(kind === 'revenue' ? await api.revenues() : await api.expenses()) } catch (err) { setError(err instanceof Error ? err.message : `Não foi possível carregar as ${label}s.`) } finally { setLoading(false) }
+  }, [kind, label])
+
+  useEffect(() => { void loadEntries() }, [loadEntries])
+
+  async function submit(event: FormEvent) {
+    event.preventDefault()
+    setSaving(true)
+    setError('')
+    try {
+      const data = { projectId: form.projectId, category: form.category, description: form.description || undefined, amount: Number(form.amount), competence: form.competence }
+      if (kind === 'revenue') await api.createRevenue({ ...data, receivedAt: form.settlementDate || undefined })
+      else await api.createExpense({ ...data, dueDate: form.settlementDate || undefined })
+      setShowForm(false)
+      setForm({ projectId: projects[0]?.id ?? '', category: '', description: '', amount: '', competence: new Date().toISOString().slice(0, 10), settlementDate: '' })
+      await loadEntries()
+    } catch (err) { setError(err instanceof Error ? err.message : `Não foi possível salvar a ${label}.`) } finally { setSaving(false) }
+  }
+
+  return <section className="panel projects-panel finance-page"><div className="panel-head"><div><h2>{kind === 'revenue' ? 'Receitas registradas' : 'Despesas registradas'}</h2><p>A data de geração é registrada como competência no PostgreSQL.</p></div><button className="primary-btn" onClick={() => { setForm(current => ({ ...current, projectId: current.projectId || projects[0]?.id || '' })); setShowForm(true) }} disabled={!projects.length}><Plus size={16} /> Nova {label}</button></div>{error && <div className="login-error">{error}</div>}{!projects.length ? <div className="empty-state"><h2>Cadastre um projeto primeiro</h2><p>Uma {label} precisa estar vinculada a um projeto.</p></div> : loading ? <div className="empty-state"><p>Carregando lançamentos...</p></div> : entries.length ? <div className="project-table"><div className="table-row table-head"><span>Projeto</span><span>Categoria</span><span>Valor</span><span>Data de geração</span><span>Data adicional</span><span /></div>{entries.map(entry => <div className="table-row" key={entry.id}><div className="project-name"><span className="project-dot" style={{ background: '#7c6cff' }} /><div><b>{entry.project.name}</b><small>{entry.description || 'Sem descrição'}</small></div></div><span>{entry.category}</span><span className="table-money">{money(entry.amount)}</span><span>{new Date(entry.competence).toLocaleDateString('pt-BR')}</span><span>{(kind === 'revenue' ? entry.receivedAt : entry.dueDate) ? new Date((kind === 'revenue' ? entry.receivedAt : entry.dueDate) as string).toLocaleDateString('pt-BR') : '—'}</span><span /></div>)}</div> : <div className="empty-state"><div className="empty-icon"><CircleDollarSign size={24} /></div><h2>Nenhuma {label} cadastrada</h2><p>Registre o primeiro lançamento para alimentar o dashboard.</p><button className="primary-btn" onClick={() => setShowForm(true)}><Plus size={16} /> Nova {label}</button></div>}{showForm && <div className="modal-backdrop" onClick={() => setShowForm(false)}><form className="modal panel" onSubmit={submit} onClick={event => event.stopPropagation()}><div className="modal-head"><div><h2>Nova {label}</h2><p>O lançamento será salvo no PostgreSQL.</p></div><button type="button" className="icon-btn" onClick={() => setShowForm(false)}><X size={17} /></button></div><label>Projeto<select value={form.projectId} onChange={event => setForm({ ...form, projectId: event.target.value })} required><option value="">Selecione um projeto</option>{projects.map(project => <option key={project.id} value={project.id}>{project.name}</option>)}</select></label><label>Categoria<input value={form.category} onChange={event => setForm({ ...form, category: event.target.value })} placeholder={kind === 'revenue' ? 'Ex.: Venda, mensalidade' : 'Ex.: Marketing, operação'} required /></label><label>Valor<input type="number" min="0.01" step="0.01" value={form.amount} onChange={event => setForm({ ...form, amount: event.target.value })} placeholder="0,00" required /></label><label>Data de geração / competência<input type="date" value={form.competence} onChange={event => setForm({ ...form, competence: event.target.value })} required /></label><label>{kind === 'revenue' ? 'Data de recebimento (opcional)' : 'Data de vencimento (opcional)'}<input type="date" value={form.settlementDate} onChange={event => setForm({ ...form, settlementDate: event.target.value })} /></label><label>Descrição<input value={form.description} onChange={event => setForm({ ...form, description: event.target.value })} placeholder="Opcional" /></label><div className="modal-actions"><button type="button" className="secondary-btn" onClick={() => setShowForm(false)}>Cancelar</button><button className="primary-btn" disabled={saving}>{saving ? 'Salvando...' : 'Salvar lançamento'}</button></div></form></div>}</section>
 }
 
 function App() {
@@ -94,9 +127,9 @@ function App() {
     <main className="main">
       <header className="topbar"><div className="breadcrumbs"><span>Portfólio</span><span className="slash">/</span><b>{active}</b></div><div className="top-actions"><button className="search"><Search size={16} /><span>Buscar</span><kbd><Command size={12} /> K</kbd></button><button className="icon-btn" onClick={() => setDark(!dark)} aria-label="Alternar tema">{dark ? <Sun size={17} /> : <Sun size={17} />}</button><button className="icon-btn notification"><Bell size={17} /></button><div className="top-avatar">{(user.email ?? 'AD').slice(0, 2).toUpperCase()}</div></div></header>
       <div className="content">
-        <section className="page-head"><div><h1>{active}</h1><p>Dados carregados do seu workspace e do banco de produção.</p></div><div className="head-actions"><div className="select-wrap"><Clock3 size={15} /><select value={period} onChange={event => setPeriod(event.target.value)}><option>Últimos 12 meses</option><option>Este mês</option><option>Este trimestre</option></select><ChevronDown size={14} /></div><button className="primary-btn" onClick={() => setShowModal(true)}><Plus size={16} /> Novo projeto</button></div></section>
+        <section className="page-head"><div><h1>{active}</h1><p>Dados carregados do seu workspace e do banco de produção.</p></div><div className="head-actions"><div className="select-wrap"><Clock3 size={15} /><select value={period} onChange={event => setPeriod(event.target.value)}><option>Últimos 12 meses</option><option>Este mês</option><option>Este trimestre</option></select><ChevronDown size={14} /></div>{active !== 'Receitas' && active !== 'Despesas' && <button className="primary-btn" onClick={() => setShowModal(true)}><Plus size={16} /> Novo projeto</button>}</div></section>
         {error && <div className="login-error">{error}</div>}
-        {active !== 'Visão geral' && active !== 'Projetos' ? <section className="empty-state panel"><div className="empty-icon"><BriefcaseBusiness size={24} /></div><h2>{active}</h2><p>Este módulo ainda não possui operações conectadas à API. Os dados exibidos no dashboard são reais.</p><button className="secondary-btn" onClick={() => setActive('Visão geral')}>Voltar para visão geral</button></section> : <>
+        {active === 'Receitas' ? <FinancePage kind="revenue" projects={projects} /> : active === 'Despesas' ? <FinancePage kind="expense" projects={projects} /> : active !== 'Visão geral' && active !== 'Projetos' ? <section className="empty-state panel"><div className="empty-icon"><BriefcaseBusiness size={24} /></div><h2>{active}</h2><p>Este módulo ainda não possui operações conectadas à API. Os dados exibidos no dashboard são reais.</p><button className="secondary-btn" onClick={() => setActive('Visão geral')}>Voltar para visão geral</button></section> : <>
           {active === 'Visão geral' && <>
             <div className="kpi-grid"><Kpi label="Projetos" value={String(summary.projects)} icon={FolderKanban} /><Kpi label="Receita total" value={money(summary.revenue)} icon={CircleDollarSign} /><Kpi label="Despesas" value={money(summary.expense)} icon={CreditCard} /><Kpi label="Lucro líquido" value={money(summary.profit)} positive={summary.profit >= 0} icon={BarChart3} /><Kpi label="ROI geral" value={`${summary.roi.toFixed(1)}%`} positive={summary.roi >= 0} icon={Gauge} /></div>
             <div className="dashboard-grid"><section className="panel chart-panel"><div className="panel-head"><div><h2>Resumo financeiro</h2><p>Totais registrados no banco de dados</p></div></div><div className="empty-state"><div className="empty-icon"><BarChart3 size={24} /></div><h2>{summary.revenue || summary.expense ? 'Resumo atualizado' : 'Sem movimentações financeiras'}</h2><p>{summary.revenue || summary.expense ? `Receitas de ${money(summary.revenue)} e despesas de ${money(summary.expense)} foram encontradas.` : 'Cadastre receitas e despesas para acompanhar a evolução financeira.'}</p></div></section><section className="panel insights-panel"><div className="panel-head"><div><h2>Insights</h2><p>Alertas calculados com os dados reais</p></div><span className="ai-spark"><Sparkles size={15} /></span></div>{attentionProject ? <div className="insight warning"><div className="insight-icon"><ShieldAlert size={17} /></div><div><b>Projeto em atenção</b><p>{attentionProject.name} está com margem de {attentionProject.margin.toFixed(1)}%.</p></div></div> : opportunityProject ? <div className="insight opportunity"><div className="insight-icon"><Lightbulb size={17} /></div><div><b>Boa margem identificada</b><p>{opportunityProject.name} apresenta margem de {opportunityProject.margin.toFixed(1)}%.</p></div></div> : <div className="empty-state"><p>Cadastre movimentações financeiras para gerar insights.</p></div>}</section></div>

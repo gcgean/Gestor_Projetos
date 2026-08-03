@@ -7,10 +7,12 @@ import { ProjectsController } from './projects/projects.controller'
 import { ProjectsService } from './projects/projects.service'
 import { DashboardController } from './dashboard/dashboard.controller'
 import { DashboardService } from './dashboard/dashboard.service'
+import { FinanceController } from './finance/finance.controller'
+import { FinanceService } from './finance/finance.service'
 
 @Module({
   imports: [JwtModule.register({ secret: process.env.JWT_SECRET ?? 'dev-secret', signOptions: { expiresIn: '7d' } })],
-  controllers: [AuthController, ProjectsController, DashboardController],
-  providers: [PrismaService, AuthService, ProjectsService, DashboardService],
+  controllers: [AuthController, ProjectsController, DashboardController, FinanceController],
+  providers: [PrismaService, AuthService, ProjectsService, DashboardService, FinanceService],
 })
 export class AppModule {}
