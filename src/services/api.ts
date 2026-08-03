@@ -20,6 +20,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     ...init,
     headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...init?.headers },
   })
+  if (response.status === 401) {
+    localStorage.removeItem('gestor_projetos_token')
+    localStorage.removeItem('gestor_projetos_user')
+    window.location.reload()
+    throw new Error('Sessão expirada. Faça login novamente.')
+  }
   if (!response.ok) throw new Error((await response.json().catch(() => null))?.message ?? 'Erro ao comunicar com a API')
   return response.json() as Promise<T>
 }
