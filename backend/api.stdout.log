@@ -1,0 +1,86 @@
+
+> gestor_projetos@0.2.0 dev:back
+> npm --prefix backend run start:dev
+
+
+> gestor_projetos_api@0.2.0 start:dev
+> tsx watch src/main.ts
+
+14:32:02 [tsx] change in ./src\main.ts Rerunning...
+[32m[Nest] 23168  - [39m02/08/2026, 14:32:07 [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 23168  - [39m02/08/2026, 14:32:07 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mJwtModule dependencies initialized[39m[38;5;3m +42ms[39m
+[32m[Nest] 23168  - [39m02/08/2026, 14:32:07 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAppModule dependencies initialized[39m[38;5;3m +2ms[39m
+[32m[Nest] 23168  - [39m02/08/2026, 14:32:07 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAuthController {/api/auth}:[39m[38;5;3m +104ms[39m
+[32m[Nest] 23168  - [39m02/08/2026, 14:32:07 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/register, POST} route[39m[38;5;3m +6ms[39m
+[32m[Nest] 23168  - [39m02/08/2026, 14:32:07 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/login, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 23168  - [39m02/08/2026, 14:32:07 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mProjectsController {/api/projects}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 23168  - [39m02/08/2026, 14:32:07 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/projects, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 23168  - [39m02/08/2026, 14:32:07 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/projects, POST} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 23168  - [39m02/08/2026, 14:32:07 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mDashboardController {/api/dashboard}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 23168  - [39m02/08/2026, 14:32:07 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/dashboard/summary, GET} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 23168  - [39m02/08/2026, 14:32:07 [32m    LOG[39m [38;5;3m[NestApplication] [39m[32mNest application successfully started[39m[38;5;3m +3ms[39m
+14:32:29 [tsx] change in ./src\main.ts Rerunning...
+[32m[Nest] 22900  - [39m02/08/2026, 14:32:34 [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 22900  - [39m02/08/2026, 14:32:34 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mJwtModule dependencies initialized[39m[38;5;3m +37ms[39m
+[32m[Nest] 22900  - [39m02/08/2026, 14:32:34 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAppModule dependencies initialized[39m[38;5;3m +2ms[39m
+[32m[Nest] 22900  - [39m02/08/2026, 14:32:34 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAuthController {/api/auth}:[39m[38;5;3m +120ms[39m
+[32m[Nest] 22900  - [39m02/08/2026, 14:32:34 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/register, POST} route[39m[38;5;3m +8ms[39m
+[32m[Nest] 22900  - [39m02/08/2026, 14:32:34 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/login, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 22900  - [39m02/08/2026, 14:32:34 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mProjectsController {/api/projects}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 22900  - [39m02/08/2026, 14:32:34 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/projects, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 22900  - [39m02/08/2026, 14:32:34 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/projects, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 22900  - [39m02/08/2026, 14:32:34 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mDashboardController {/api/dashboard}:[39m[38;5;3m +1ms[39m
+[32m[Nest] 22900  - [39m02/08/2026, 14:32:34 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/dashboard/summary, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 22900  - [39m02/08/2026, 14:32:34 [32m    LOG[39m [38;5;3m[NestApplication] [39m[32mNest application successfully started[39m[38;5;3m +3ms[39m
+18:13:57 [tsx] change in ./src\main.ts Restarting...
+[32m[Nest] 1636  - [39m02/08/2026, 18:14:01 [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 1636  - [39m02/08/2026, 18:14:02 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mJwtModule dependencies initialized[39m[38;5;3m +145ms[39m
+[32m[Nest] 1636  - [39m02/08/2026, 18:14:02 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAppModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 1636  - [39m02/08/2026, 18:14:02 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAuthController {/api/auth}:[39m[38;5;3m +66ms[39m
+[32m[Nest] 1636  - [39m02/08/2026, 18:14:02 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/register, POST} route[39m[38;5;3m +6ms[39m
+[32m[Nest] 1636  - [39m02/08/2026, 18:14:02 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/login, POST} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 1636  - [39m02/08/2026, 18:14:02 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mProjectsController {/api/projects}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 1636  - [39m02/08/2026, 18:14:02 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/projects, GET} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 1636  - [39m02/08/2026, 18:14:02 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/projects, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 1636  - [39m02/08/2026, 18:14:02 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mDashboardController {/api/dashboard}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 1636  - [39m02/08/2026, 18:14:02 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/dashboard/summary, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 1636  - [39m02/08/2026, 18:14:02 [32m    LOG[39m [38;5;3m[NestApplication] [39m[32mNest application successfully started[39m[38;5;3m +4ms[39m
+x] change in ./src\main.ts Restarting...
+[32m[Nest] 21912  - [39m02/08/2026, 14:32:07 [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 21912  - [39m02/08/2026, 14:32:07 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mJwtModule dependencies initialized[39m[38;5;3m +42ms[39m
+[32m[Nest] 21912  - [39m02/08/2026, 14:32:07 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAppModule dependencies initialized[39m[38;5;3m +3ms[39m
+[32m[Nest] 21912  - [39m02/08/2026, 14:32:07 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAuthController {/api/auth}:[39m[38;5;3m +108ms[39m
+[32m[Nest] 21912  - [39m02/08/2026, 14:32:07 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/register, POST} route[39m[38;5;3m +7ms[39m
+[32m[Nest] 21912  - [39m02/08/2026, 14:32:07 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/login, POST} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 21912  - [39m02/08/2026, 14:32:07 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mProjectsController {/api/projects}:[39m[38;5;3m +1ms[39m
+[32m[Nest] 21912  - [39m02/08/2026, 14:32:07 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/projects, GET} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 21912  - [39m02/08/2026, 14:32:07 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/projects, POST} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 21912  - [39m02/08/2026, 14:32:07 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mDashboardController {/api/dashboard}:[39m[38;5;3m +1ms[39m
+[32m[Nest] 21912  - [39m02/08/2026, 14:32:07 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/dashboard/summary, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 21912  - [39m02/08/2026, 14:32:07 [32m    LOG[39m [38;5;3m[NestApplication] [39m[32mNest application successfully started[39m[38;5;3m +4ms[39m
+14:32:29 [tsx] change in ./src\main.ts Rerunning...
+[32m[Nest] 10036  - [39m02/08/2026, 14:32:34 [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 10036  - [39m02/08/2026, 14:32:34 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mJwtModule dependencies initialized[39m[38;5;3m +36ms[39m
+[32m[Nest] 10036  - [39m02/08/2026, 14:32:34 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAppModule dependencies initialized[39m[38;5;3m +2ms[39m
+[32m[Nest] 10036  - [39m02/08/2026, 14:32:34 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAuthController {/api/auth}:[39m[38;5;3m +115ms[39m
+[32m[Nest] 10036  - [39m02/08/2026, 14:32:34 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/register, POST} route[39m[38;5;3m +8ms[39m
+[32m[Nest] 10036  - [39m02/08/2026, 14:32:34 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/login, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 10036  - [39m02/08/2026, 14:32:34 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mProjectsController {/api/projects}:[39m[38;5;3m +1ms[39m
+[32m[Nest] 10036  - [39m02/08/2026, 14:32:34 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/projects, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 10036  - [39m02/08/2026, 14:32:34 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/projects, POST} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 10036  - [39m02/08/2026, 14:32:34 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mDashboardController {/api/dashboard}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 10036  - [39m02/08/2026, 14:32:34 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/dashboard/summary, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 10036  - [39m02/08/2026, 14:32:34 [32m    LOG[39m [38;5;3m[NestApplication] [39m[32mNest application successfully started[39m[38;5;3m +4ms[39m
+18:13:58 [tsx] change in ./src\auth\auth.service.ts Rerunning...
+[32m[Nest] 21852  - [39m02/08/2026, 18:14:01 [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 21852  - [39m02/08/2026, 18:14:02 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mJwtModule dependencies initialized[39m[38;5;3m +144ms[39m
+[32m[Nest] 21852  - [39m02/08/2026, 18:14:02 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAppModule dependencies initialized[39m[38;5;3m +3ms[39m
+[32m[Nest] 21852  - [39m02/08/2026, 18:14:02 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAuthController {/api/auth}:[39m[38;5;3m +65ms[39m
+[32m[Nest] 21852  - [39m02/08/2026, 18:14:02 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/register, POST} route[39m[38;5;3m +7ms[39m
+[32m[Nest] 21852  - [39m02/08/2026, 18:14:02 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/login, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 21852  - [39m02/08/2026, 18:14:02 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mProjectsController {/api/projects}:[39m[38;5;3m +1ms[39m
+[32m[Nest] 21852  - [39m02/08/2026, 18:14:02 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/projects, GET} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 21852  - [39m02/08/2026, 18:14:02 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/projects, POST} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 21852  - [39m02/08/2026, 18:14:02 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mDashboardController {/api/dashboard}:[39m[38;5;3m +1ms[39m
+[32m[Nest] 21852  - [39m02/08/2026, 18:14:02 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/dashboard/summary, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 21852  - [39m02/08/2026, 18:14:02 [32m    LOG[39m [38;5;3m[NestApplication] [39m[32mNest application successfully started[39m[38;5;3m +4ms[39m
