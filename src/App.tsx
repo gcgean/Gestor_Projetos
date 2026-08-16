@@ -316,6 +316,7 @@ function ProfitabilityPanel({ months }: { months: MonthlySummary[] }) {
   const withMargin = months.map(month => ({ ...month, margin: month.revenue > 0 ? (month.profit / month.revenue) * 100 : null }))
   const validMonths = withMargin.filter((month): month is MonthlySummary & { margin: number } => month.margin !== null)
   const avgMargin = validMonths.length ? validMonths.reduce((sum, month) => sum + month.margin, 0) / validMonths.length : 0
+  const avgProfit = validMonths.length ? validMonths.reduce((sum, month) => sum + month.profit, 0) / validMonths.length : 0
   const best = validMonths.length ? validMonths.reduce((a, b) => (b.margin > a.margin ? b : a)) : null
   const worst = validMonths.length ? validMonths.reduce((a, b) => (b.margin < a.margin ? b : a)) : null
   const profitableCount = months.filter(month => month.profit > 0).length
@@ -331,9 +332,9 @@ function ProfitabilityPanel({ months }: { months: MonthlySummary[] }) {
   return <section className="panel projects-panel">
     <div className="panel-head"><div><h2>Lucratividade</h2><p>Margem de lucro (lucro ÷ receita) mês a mês, últimos 12 meses</p></div></div>
     <div className="kpi-grid">
-      <Kpi label="Margem média" value={`${avgMargin.toFixed(1)}%`} icon={Gauge} />
-      <Kpi label="Melhor mês" value={best ? `${formatMonth(best.month)} · ${best.margin.toFixed(1)}%` : '—'} icon={ArrowUpRight} />
-      <Kpi label="Pior mês" value={worst ? `${formatMonth(worst.month)} · ${worst.margin.toFixed(1)}%` : '—'} icon={ArrowDownRight} />
+      <Kpi label="Lucro médio mensal" value={money(avgProfit)} change={`${avgMargin.toFixed(1)}% de margem`} positive={avgMargin >= 0} icon={Gauge} />
+      <Kpi label="Melhor mês" value={best ? money(best.profit) : '—'} change={best ? `${formatMonth(best.month)} · ${best.margin.toFixed(1)}%` : undefined} positive icon={ArrowUpRight} />
+      <Kpi label="Pior mês" value={worst ? money(worst.profit) : '—'} change={worst ? `${formatMonth(worst.month)} · ${worst.margin.toFixed(1)}%` : undefined} positive={worst ? worst.margin >= 0 : undefined} icon={ArrowDownRight} />
       <Kpi label="Meses lucrativos" value={`${profitableCount}/${months.length}`} icon={Check} />
     </div>
     <div className="chart-wrap">
@@ -342,7 +343,7 @@ function ProfitabilityPanel({ months }: { months: MonthlySummary[] }) {
         {withMargin.map((month, index) => {
           const value = month.margin ?? 0
           const y = scaleY(value)
-          return <rect key={month.month} x={index * groupWidth + groupWidth / 2 - barWidth / 2} y={Math.min(y, baseline)} width={barWidth} height={Math.max(1, Math.abs(baseline - y))} rx={3} fill={value >= 0 ? 'var(--green)' : 'var(--red)'}><title>{`${formatMonth(month.month)}: ${month.margin === null ? 'sem receita' : `${month.margin.toFixed(1)}%`}`}</title></rect>
+          return <rect key={month.month} x={index * groupWidth + groupWidth / 2 - barWidth / 2} y={Math.min(y, baseline)} width={barWidth} height={Math.max(1, Math.abs(baseline - y))} rx={3} fill={value >= 0 ? 'var(--green)' : 'var(--red)'}><title>{`${formatMonth(month.month)}: ${month.margin === null ? 'sem receita' : `${money(month.profit)} · ${month.margin.toFixed(1)}%`}`}</title></rect>
         })}
         {withMargin.map((month, index) => (index % 2 === 0 || months.length <= 6) && <text key={`${month.month}-margin-label`} x={index * groupWidth + groupWidth / 2} y={height + 14} textAnchor="middle" fontSize={9} fill="var(--muted-2)">{formatMonth(month.month)}</text>)}
       </svg>
