@@ -79,8 +79,8 @@ function Kpi({ label, value, change, positive, icon: Icon }: { label: string; va
 }
 
 function ConfirmDialog({ title, message, confirmLabel, onConfirm, onCancel }: { title: string; message: string; confirmLabel: string; onConfirm: () => void; onCancel: () => void }) {
-  return <div className="modal-backdrop" onClick={onCancel}>
-    <div className="modal panel" onClick={event => event.stopPropagation()}>
+  return <div className="modal-backdrop">
+    <div className="modal panel">
       <div className="modal-head"><div><h2>{title}</h2><p>{message}</p></div><button type="button" className="icon-btn" onClick={onCancel}><X size={17} /></button></div>
       <div className="modal-actions"><button type="button" className="secondary-btn" onClick={onCancel}>Cancelar</button><button type="button" className="danger-btn" onClick={onConfirm}>{confirmLabel}</button></div>
     </div>
@@ -94,8 +94,8 @@ function ProjectModal({ title, submitLabel, initial, saving, error, onSubmit, on
   onSubmit: (data: ProjectFormData) => void; onClose: () => void
 }) {
   const [data, setData] = useState(initial)
-  return <div className="modal-backdrop" onClick={onClose}>
-    <form className="modal panel" onSubmit={event => { event.preventDefault(); onSubmit(data) }} onClick={event => event.stopPropagation()}>
+  return <div className="modal-backdrop">
+    <form className="modal panel" onSubmit={event => { event.preventDefault(); onSubmit(data) }}>
       <div className="modal-head"><div><h2>{title}</h2><p>Este registro será salvo no PostgreSQL.</p></div><button type="button" className="icon-btn" onClick={onClose}><X size={17} /></button></div>
       {error && <div className="login-error">{error}</div>}
       <label>Nome do projeto<input value={data.name} onChange={event => setData({ ...data, name: event.target.value })} placeholder="Ex.: Produto Digital" minLength={2} required autoFocus /></label>
@@ -115,8 +115,8 @@ function FinanceModal({ kind, projects, title, submitLabel, initial, saving, err
   onSubmit: (data: FinanceFormData) => void; onClose: () => void
 }) {
   const [data, setData] = useState(initial)
-  return <div className="modal-backdrop" onClick={onClose}>
-    <form className="modal panel" onSubmit={event => { event.preventDefault(); onSubmit(data) }} onClick={event => event.stopPropagation()}>
+  return <div className="modal-backdrop">
+    <form className="modal panel" onSubmit={event => { event.preventDefault(); onSubmit(data) }}>
       <div className="modal-head"><div><h2>{title}</h2><p>O lançamento será salvo no PostgreSQL.</p></div><button type="button" className="icon-btn" onClick={onClose}><X size={17} /></button></div>
       {error && <div className="login-error">{error}</div>}
       <label>Projeto<select value={data.projectId} onChange={event => setData({ ...data, projectId: event.target.value })} required><option value="">Selecione um projeto</option>{projects.map(project => <option key={project.id} value={project.id}>{project.name}</option>)}</select></label>
