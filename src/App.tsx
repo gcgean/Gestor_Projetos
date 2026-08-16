@@ -5,7 +5,7 @@ import {
   FileText, FolderKanban, Gauge, Grid2X2, HelpCircle, Lightbulb, MoreHorizontal,
   Pencil, Plus, Search, Settings2, ShieldAlert, Sparkles, Sun, Target, Trash2, WalletCards, X,
 } from 'lucide-react'
-import { api, ApiFinanceEntry, ApiProject, DateRange } from './services/api'
+import { api, ApiFinanceEntry, ApiProject, CashflowData, DateRange } from './services/api'
 
 type Summary = { projects: number; revenue: number; expense: number; profit: number; roi: number }
 
@@ -41,6 +41,13 @@ function formatDate(value?: string | null) {
   if (!value) return '—'
   const [year, month, day] = value.slice(0, 10).split('-')
   return `${day}/${month}/${year}`
+}
+
+const monthNames = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
+
+function formatMonth(monthKey: string) {
+  const [year, month] = monthKey.split('-')
+  return `${monthNames[Number(month) - 1]}/${year}`
 }
 
 function todayLocal() {
@@ -216,6 +223,59 @@ function FinancePage({ kind, projects, search, range }: { kind: 'revenue' | 'exp
   </section>
 }
 
+function CashflowPage({ range }: { range: DateRange }) {
+  const [data, setData] = useState<CashflowData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    setLoading(true)
+    setError('')
+    api.cashflow(range).then(setData).catch(err => setError(err instanceof Error ? err.message : 'Não foi possível carregar o fluxo de caixa.')).finally(() => setLoading(false))
+  }, [range])
+
+  if (loading) return <div className="empty-state panel"><p>Carregando fluxo de caixa...</p></div>
+  if (error) return <div className="login-error">{error}</div>
+  if (!data) return null
+
+  return <>
+    <div className="kpi-grid">
+      <Kpi label="Recebido no período" value={money(data.totalIn)} icon={ArrowUpRight} />
+      <Kpi label="Pago no período" value={money(data.totalOut)} icon={ArrowDownRight} />
+      <Kpi label="Saldo do período" value={money(data.balance)} positive={data.balance >= 0} icon={WalletCards} />
+      <Kpi label="Pendente (a receber − a pagar)" value={money(data.pendingIn - data.pendingOut)} icon={Clock3} />
+    </div>
+    <section className="panel projects-panel">
+      <div className="panel-head"><div><h2>Fluxo por mês</h2><p>Baseado na data de recebimento/vencimento, não na competência</p></div></div>
+      {!data.months.length ? <div className="empty-state"><p>Sem movimentações de caixa no período. Preencha a data de recebimento ou vencimento nos lançamentos para elas aparecerem aqui.</p></div> : <div className="project-table">
+        <div className="table-row table-head"><span>Mês</span><span>Entradas</span><span>Saídas</span><span>Líquido</span><span>Saldo acumulado</span><span /></div>
+        {data.months.map(month => <div className="table-row" key={month.month}>
+          <div className="project-name"><b>{formatMonth(month.month)}</b></div>
+          <span className="table-money">{money(month.in)}</span>
+          <span className="table-money">{money(month.out)}</span>
+          <span className={month.net < 0 ? 'margin negative' : 'margin'}>{money(month.net)}</span>
+          <span className="table-money">{money(month.balance)}</span>
+          <span />
+        </div>)}
+      </div>}
+    </section>
+    <section className="panel projects-panel finance-page">
+      <div className="panel-head"><div><h2>Movimentações de caixa</h2><p>Receitas recebidas e despesas vencidas no período, por data</p></div></div>
+      {!data.movements.length ? <div className="empty-state"><p>Nenhuma movimentação de caixa no período.</p></div> : <div className="project-table">
+        <div className="table-row table-head"><span>Projeto</span><span>Categoria</span><span>Tipo</span><span>Valor</span><span>Data</span><span /></div>
+        {data.movements.map((movement, index) => <div className="table-row" key={index}>
+          <div className="project-name"><span className="project-dot" style={{ background: movement.type === 'in' ? 'var(--green)' : 'var(--red)' }} /><b>{movement.project}</b></div>
+          <span>{movement.category}</span>
+          <span>{movement.type === 'in' ? 'Entrada' : 'Saída'}</span>
+          <span className="table-money">{money(movement.amount)}</span>
+          <span>{formatDate(movement.date)}</span>
+          <span />
+        </div>)}
+      </div>}
+    </section>
+  </>
+}
+
 function App() {
   const [active, setActive] = useState('Visão geral')
   const [dark, setDark] = useState(true)
@@ -298,7 +358,7 @@ function App() {
       <div className="content">
         <section className="page-head"><div><h1>{active}</h1><p>Dados carregados do seu workspace.</p></div><div className="head-actions"><div className="select-wrap"><Clock3 size={15} /><select value={period} onChange={event => setPeriod(event.target.value)}><option>Últimos 12 meses</option><option>Este mês</option><option>Este trimestre</option></select><ChevronDown size={14} /></div>{active !== 'Receitas' && active !== 'Despesas' && <button className="primary-btn" onClick={() => setShowModal(true)}><Plus size={16} /> Novo projeto</button>}</div></section>
         {error && <div className="login-error">{error}</div>}
-        {active === 'Receitas' ? <FinancePage kind="revenue" projects={projects} search={search} range={range} /> : active === 'Despesas' ? <FinancePage kind="expense" projects={projects} search={search} range={range} /> : active !== 'Visão geral' && active !== 'Projetos' ? <section className="empty-state panel"><div className="empty-icon"><BriefcaseBusiness size={24} /></div><h2>{active}</h2><p>Módulo em desenvolvimento.</p><button className="secondary-btn" onClick={() => setActive('Visão geral')}>Voltar para visão geral</button></section> : <>
+        {active === 'Receitas' ? <FinancePage kind="revenue" projects={projects} search={search} range={range} /> : active === 'Despesas' ? <FinancePage kind="expense" projects={projects} search={search} range={range} /> : active === 'Fluxo de caixa' ? <CashflowPage range={range} /> : active !== 'Visão geral' && active !== 'Projetos' ? <section className="empty-state panel"><div className="empty-icon"><BriefcaseBusiness size={24} /></div><h2>{active}</h2><p>Módulo em desenvolvimento.</p><button className="secondary-btn" onClick={() => setActive('Visão geral')}>Voltar para visão geral</button></section> : <>
           {active === 'Visão geral' && <>
             <div className="kpi-grid"><Kpi label="Projetos" value={String(summary.projects)} icon={FolderKanban} /><Kpi label="Receita total" value={money(summary.revenue)} icon={CircleDollarSign} /><Kpi label="Despesas" value={money(summary.expense)} icon={CreditCard} /><Kpi label="Lucro líquido" value={money(summary.profit)} positive={summary.profit >= 0} icon={BarChart3} /><Kpi label="ROI geral" value={summary.expense > 0 ? `${summary.roi.toFixed(1)}%` : '—'} positive={summary.roi >= 0} icon={Gauge} /></div>
             <div className="dashboard-grid"><section className="panel chart-panel"><div className="panel-head"><div><h2>Resumo financeiro</h2><p>Totais registrados no período selecionado</p></div></div><div className="empty-state"><div className="empty-icon"><BarChart3 size={24} /></div><h2>{summary.revenue || summary.expense ? 'Resumo atualizado' : 'Sem movimentações financeiras'}</h2><p>{summary.revenue || summary.expense ? `Receitas de ${money(summary.revenue)} e despesas de ${money(summary.expense)} foram encontradas.` : 'Cadastre receitas e despesas para acompanhar a evolução financeira.'}</p></div></section><section className="panel insights-panel"><div className="panel-head"><div><h2>Insights</h2><p>Alertas calculados com os dados reais</p></div><span className="ai-spark"><Sparkles size={15} /></span></div>{attentionProject ? <div className="insight warning"><div className="insight-icon"><ShieldAlert size={17} /></div><div><b>Projeto em atenção</b><p>{attentionProject.name} está com margem de {attentionProject.margin.toFixed(1)}%.</p></div></div> : opportunityProject ? <div className="insight opportunity"><div className="insight-icon"><Lightbulb size={17} /></div><div><b>Boa margem identificada</b><p>{opportunityProject.name} apresenta margem de {opportunityProject.margin.toFixed(1)}%.</p></div></div> : <div className="empty-state"><p>Cadastre movimentações financeiras para gerar insights.</p></div>}</section></div>

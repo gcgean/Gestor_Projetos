@@ -16,6 +16,10 @@ export type ApiFinanceEntry = { id: string; projectId: string; category: string;
 
 export type DateRange = { from?: string; to?: string }
 
+export type CashflowMonth = { month: string; in: number; out: number; net: number; balance: number }
+export type CashflowMovement = { type: 'in' | 'out'; date: string; amount: number; category: string; project: string }
+export type CashflowData = { totalIn: number; totalOut: number; balance: number; pendingIn: number; pendingOut: number; months: CashflowMonth[]; movements: CashflowMovement[] }
+
 function query(range?: DateRange) {
   if (!range || (!range.from && !range.to)) return ''
   const params = new URLSearchParams()
@@ -45,6 +49,7 @@ export const api = {
   projects: (range?: DateRange) => request<ApiProject[]>(`/projects${query(range)}`),
   createProject: (data: Pick<ApiProject, 'name' | 'type'> & Partial<Pick<ApiProject, 'description' | 'color' | 'status'>>) => request<ApiProject>('/projects', { method: 'POST', body: JSON.stringify(data) }),
   dashboard: (range?: DateRange) => request<{ projects: number; revenue: number; expense: number; profit: number; roi: number }>(`/dashboard/summary${query(range)}`),
+  cashflow: (range?: DateRange) => request<CashflowData>(`/dashboard/cashflow${query(range)}`),
   categories: (kind: 'revenue' | 'expense') => request<string[]>(`/finance/categories?kind=${kind}`),
   revenues: (range?: DateRange) => request<ApiFinanceEntry[]>(`/finance/revenues${query(range)}`),
   expenses: (range?: DateRange) => request<ApiFinanceEntry[]>(`/finance/expenses${query(range)}`),
