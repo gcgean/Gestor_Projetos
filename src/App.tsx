@@ -5,7 +5,7 @@ import {
   FileText, FolderKanban, Gauge, Grid2X2, HelpCircle, Lightbulb, MoreHorizontal,
   Pencil, Plus, Search, Settings2, ShieldAlert, Sparkles, Sun, Target, Trash2, WalletCards, X,
 } from 'lucide-react'
-import { api, ApiFinanceEntry, ApiProject, CashflowData, DateRange } from './services/api'
+import { api, ApiFinanceEntry, ApiProject, CashflowData, DateRange, MonthlySummary } from './services/api'
 
 type Summary = { projects: number; revenue: number; expense: number; profit: number; roi: number }
 
@@ -276,6 +276,42 @@ function CashflowPage({ range }: { range: DateRange }) {
   </>
 }
 
+function MonthlyChart({ months }: { months: MonthlySummary[] }) {
+  const width = 700
+  const height = 180
+  const groupWidth = width / months.length
+  const barWidth = Math.min(14, groupWidth * 0.28)
+  const maxValue = Math.max(1, ...months.flatMap(month => [month.revenue, month.expense]))
+  const minValue = Math.min(0, ...months.map(month => month.profit))
+  const span = maxValue - minValue || 1
+  const scaleY = (value: number) => height - ((value - minValue) / span) * height
+  const baseline = scaleY(0)
+  const points = months.map((month, index) => `${index * groupWidth + groupWidth / 2},${scaleY(month.profit)}`).join(' ')
+
+  return <div className="chart-wrap">
+    <div className="chart-legend">
+      <span><span className="legend-dot" style={{ background: 'var(--green)' }} />Receita</span>
+      <span><span className="legend-dot" style={{ background: 'var(--red)' }} />Despesa</span>
+      <span><span className="legend-dot" style={{ background: 'var(--blue)' }} />Lucro</span>
+    </div>
+    <svg className="chart" viewBox={`0 0 ${width} ${height + 20}`} preserveAspectRatio="none">
+      <line x1={0} y1={baseline} x2={width} y2={baseline} className="grid-line" />
+      {months.map((month, index) => {
+        const groupX = index * groupWidth
+        const revenueY = scaleY(month.revenue)
+        const expenseY = scaleY(month.expense)
+        return <g key={month.month}>
+          <rect x={groupX + groupWidth / 2 - barWidth - 2} y={Math.min(revenueY, baseline)} width={barWidth} height={Math.max(1, Math.abs(baseline - revenueY))} rx={3} fill="var(--green)"><title>{`Receita ${formatMonth(month.month)}: ${money(month.revenue)}`}</title></rect>
+          <rect x={groupX + groupWidth / 2 + 2} y={Math.min(expenseY, baseline)} width={barWidth} height={Math.max(1, Math.abs(baseline - expenseY))} rx={3} fill="var(--red)"><title>{`Despesa ${formatMonth(month.month)}: ${money(month.expense)}`}</title></rect>
+        </g>
+      })}
+      <polyline points={points} fill="none" stroke="var(--blue)" strokeWidth={2} />
+      {months.map((month, index) => <circle key={`${month.month}-dot`} cx={index * groupWidth + groupWidth / 2} cy={scaleY(month.profit)} r={3.5} fill="var(--blue)"><title>{`Lucro ${formatMonth(month.month)}: ${money(month.profit)}`}</title></circle>)}
+      {months.map((month, index) => (index % 2 === 0 || months.length <= 6) && <text key={`${month.month}-label`} x={index * groupWidth + groupWidth / 2} y={height + 14} textAnchor="middle" fontSize={9} fill="var(--muted-2)">{formatMonth(month.month)}</text>)}
+    </svg>
+  </div>
+}
+
 function App() {
   const [active, setActive] = useState('Visão geral')
   const [dark, setDark] = useState(true)
@@ -290,6 +326,8 @@ function App() {
   const [error, setError] = useState('')
   const [editingProject, setEditingProject] = useState<ApiProject | null>(null)
   const [deletingProject, setDeletingProject] = useState<ApiProject | null>(null)
+  const [months, setMonths] = useState<MonthlySummary[]>([])
+  const [trend, setTrend] = useState<'up' | 'down' | 'flat'>('flat')
   const user = useMemo(() => {
     try { return JSON.parse(localStorage.getItem('gestor_projetos_user') ?? '{}') as { email?: string; role?: string } } catch { return {} }
   }, [])
@@ -310,6 +348,7 @@ function App() {
 
   useEffect(() => { void loadData() }, [loadData])
   useEffect(() => { if (active === 'Visão geral') void loadData() }, [active])
+  useEffect(() => { if (active === 'Visão geral') api.monthly().then(data => { setMonths(data.months); setTrend(data.trend) }).catch(() => {}) }, [active])
 
   const filteredProjects = useMemo(() => projects.filter(project => (projectFilter === 'Todos os projetos' || project.name === projectFilter) && `${project.name} ${project.type} ${project.status}`.toLowerCase().includes(search.toLowerCase())), [projectFilter, projects, search])
   const attentionProject = projects.find(project => project.revenue > 0 && project.margin < 20)
@@ -361,7 +400,7 @@ function App() {
         {active === 'Receitas' ? <FinancePage kind="revenue" projects={projects} search={search} range={range} /> : active === 'Despesas' ? <FinancePage kind="expense" projects={projects} search={search} range={range} /> : active === 'Fluxo de caixa' ? <CashflowPage range={range} /> : active !== 'Visão geral' && active !== 'Projetos' ? <section className="empty-state panel"><div className="empty-icon"><BriefcaseBusiness size={24} /></div><h2>{active}</h2><p>Módulo em desenvolvimento.</p><button className="secondary-btn" onClick={() => setActive('Visão geral')}>Voltar para visão geral</button></section> : <>
           {active === 'Visão geral' && <>
             <div className="kpi-grid"><Kpi label="Projetos" value={String(summary.projects)} icon={FolderKanban} /><Kpi label="Receita total" value={money(summary.revenue)} icon={CircleDollarSign} /><Kpi label="Despesas" value={money(summary.expense)} icon={CreditCard} /><Kpi label="Lucro líquido" value={money(summary.profit)} positive={summary.profit >= 0} icon={BarChart3} /><Kpi label="ROI geral" value={summary.expense > 0 ? `${summary.roi.toFixed(1)}%` : '—'} positive={summary.roi >= 0} icon={Gauge} /></div>
-            <div className="dashboard-grid"><section className="panel chart-panel"><div className="panel-head"><div><h2>Resumo financeiro</h2><p>Totais registrados no período selecionado</p></div></div><div className="empty-state"><div className="empty-icon"><BarChart3 size={24} /></div><h2>{summary.revenue || summary.expense ? 'Resumo atualizado' : 'Sem movimentações financeiras'}</h2><p>{summary.revenue || summary.expense ? `Receitas de ${money(summary.revenue)} e despesas de ${money(summary.expense)} foram encontradas.` : 'Cadastre receitas e despesas para acompanhar a evolução financeira.'}</p></div></section><section className="panel insights-panel"><div className="panel-head"><div><h2>Insights</h2><p>Alertas calculados com os dados reais</p></div><span className="ai-spark"><Sparkles size={15} /></span></div>{attentionProject ? <div className="insight warning"><div className="insight-icon"><ShieldAlert size={17} /></div><div><b>Projeto em atenção</b><p>{attentionProject.name} está com margem de {attentionProject.margin.toFixed(1)}%.</p></div></div> : opportunityProject ? <div className="insight opportunity"><div className="insight-icon"><Lightbulb size={17} /></div><div><b>Boa margem identificada</b><p>{opportunityProject.name} apresenta margem de {opportunityProject.margin.toFixed(1)}%.</p></div></div> : <div className="empty-state"><p>Cadastre movimentações financeiras para gerar insights.</p></div>}</section></div>
+            <div className="dashboard-grid"><section className="panel chart-panel"><div className="panel-head"><div><h2>Receita, despesa e lucro por mês</h2><p>Últimos 12 meses, por competência</p></div>{trend === 'up' ? <span className="trend positive"><ArrowUpRight size={14} /> Lucro em alta</span> : trend === 'down' ? <span className="trend negative"><ArrowDownRight size={14} /> Lucro em queda</span> : <span className="trend"><span style={{ color: 'var(--muted)' }}>Lucro estável</span></span>}</div>{months.length ? <MonthlyChart months={months} /> : <div className="empty-state"><div className="empty-icon"><BarChart3 size={24} /></div><h2>Sem movimentações financeiras</h2><p>Cadastre receitas e despesas para acompanhar a evolução financeira.</p></div>}</section><section className="panel insights-panel"><div className="panel-head"><div><h2>Insights</h2><p>Alertas calculados com os dados reais</p></div><span className="ai-spark"><Sparkles size={15} /></span></div>{attentionProject ? <div className="insight warning"><div className="insight-icon"><ShieldAlert size={17} /></div><div><b>Projeto em atenção</b><p>{attentionProject.name} está com margem de {attentionProject.margin.toFixed(1)}%.</p></div></div> : opportunityProject ? <div className="insight opportunity"><div className="insight-icon"><Lightbulb size={17} /></div><div><b>Boa margem identificada</b><p>{opportunityProject.name} apresenta margem de {opportunityProject.margin.toFixed(1)}%.</p></div></div> : <div className="empty-state"><p>Cadastre movimentações financeiras para gerar insights.</p></div>}</section></div>
           </>}
           <section className="panel projects-panel"><div className="panel-head"><div><h2>Projetos</h2><p>Registros pertencentes ao usuário autenticado</p></div><div className="table-actions"><div className="mini-select"><select value={projectFilter} onChange={event => setProjectFilter(event.target.value)}><option>Todos os projetos</option>{projects.map(project => <option key={project.name}>{project.name}</option>)}</select><ChevronDown size={14} /></div></div></div><div className="project-table"><div className="table-row table-head"><span>Projeto</span><span>Receita</span><span>Margem</span><span>Despesas</span><span>Status</span><span /></div>{loading ? <div className="empty-state"><p>Carregando dados...</p></div> : filteredProjects.length ? filteredProjects.map(project => <div className="table-row" key={project.id}><div className="project-name"><span className="project-dot" style={{ background: project.color }} /><div><b>{project.name?.trim() || '(sem nome)'}</b><small>{project.type}</small></div></div><span className="table-money">{money(project.revenue)}</span><span className={project.margin < 20 && project.revenue > 0 ? 'margin negative' : 'margin'}>{project.margin.toFixed(1)}%</span><span className="table-money">{money(project.expense)}</span><span className="status"><Check size={12} /> {statusLabels[project.status] ?? project.status}</span><span className="table-actions"><button className="row-more" onClick={() => setEditingProject(project)} aria-label="Alterar projeto" title="Alterar projeto"><Pencil size={15} /></button><button className="row-more" onClick={() => setDeletingProject(project)} aria-label="Excluir projeto" title="Excluir projeto"><Trash2 size={15} /></button></span></div>) : <div className="empty-state"><div className="empty-icon"><FolderKanban size={24} /></div><h2>Nenhum projeto cadastrado</h2><p>Crie seu primeiro projeto para começar a acompanhar os dados reais do portfólio.</p><button className="primary-btn" onClick={() => setShowModal(true)}><Plus size={16} /> Novo projeto</button></div>}</div></section>
         </>}

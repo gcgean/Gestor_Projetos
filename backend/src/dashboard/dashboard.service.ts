@@ -54,6 +54,55 @@ export class DashboardService {
     }
   }
 
+  async monthly(ownerId: string) {
+    const from = new Date()
+    from.setUTCDate(1)
+    from.setUTCHours(0, 0, 0, 0)
+    from.setUTCMonth(from.getUTCMonth() - 11)
+
+    const [revenues, expenses] = await Promise.all([
+      this.prisma.revenue.findMany({ where: { project: { ownerId }, competence: { gte: from } }, select: { amount: true, competence: true } }),
+      this.prisma.expense.findMany({ where: { project: { ownerId }, competence: { gte: from } }, select: { amount: true, competence: true } }),
+    ])
+
+    const buckets = new Map<string, { revenue: number; expense: number }>()
+    const cursor = new Date(from)
+    for (let i = 0; i < 12; i++) {
+      buckets.set(`${cursor.getUTCFullYear()}-${String(cursor.getUTCMonth() + 1).padStart(2, '0')}`, { revenue: 0, expense: 0 })
+      cursor.setUTCMonth(cursor.getUTCMonth() + 1)
+    }
+    for (const row of revenues) {
+      const key = `${row.competence.getUTCFullYear()}-${String(row.competence.getUTCMonth() + 1).padStart(2, '0')}`
+      const bucket = buckets.get(key)
+      if (bucket) bucket.revenue += Number(row.amount)
+    }
+    for (const row of expenses) {
+      const key = `${row.competence.getUTCFullYear()}-${String(row.competence.getUTCMonth() + 1).padStart(2, '0')}`
+      const bucket = buckets.get(key)
+      if (bucket) bucket.expense += Number(row.amount)
+    }
+
+    const months = [...buckets.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([month, value]) => ({ month, revenue: value.revenue, expense: value.expense, profit: value.revenue - value.expense }))
+    return { months, trend: this.trendDirection(months.map(month => month.profit)) }
+  }
+
+  private trendDirection(values: number[]): 'up' | 'down' | 'flat' {
+    if (values.length < 2) return 'flat'
+    const xMean = (values.length - 1) / 2
+    const yMean = values.reduce((sum, value) => sum + value, 0) / values.length
+    let numerator = 0
+    let denominator = 0
+    values.forEach((value, index) => {
+      numerator += (index - xMean) * (value - yMean)
+      denominator += (index - xMean) ** 2
+    })
+    const slope = denominator ? numerator / denominator : 0
+    const scale = Math.max(1, ...values.map(Math.abs))
+    if (slope > scale * 0.02) return 'up'
+    if (slope < -scale * 0.02) return 'down'
+    return 'flat'
+  }
+
   private competenceRange(from?: string, to?: string) {
     if (!from && !to) return null
     const range: { gte?: Date; lte?: Date } = {}
