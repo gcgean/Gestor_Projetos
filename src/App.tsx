@@ -312,6 +312,44 @@ function MonthlyChart({ months }: { months: MonthlySummary[] }) {
   </div>
 }
 
+function ProfitabilityPanel({ months }: { months: MonthlySummary[] }) {
+  const withMargin = months.map(month => ({ ...month, margin: month.revenue > 0 ? (month.profit / month.revenue) * 100 : null }))
+  const validMonths = withMargin.filter((month): month is MonthlySummary & { margin: number } => month.margin !== null)
+  const avgMargin = validMonths.length ? validMonths.reduce((sum, month) => sum + month.margin, 0) / validMonths.length : 0
+  const best = validMonths.length ? validMonths.reduce((a, b) => (b.margin > a.margin ? b : a)) : null
+  const worst = validMonths.length ? validMonths.reduce((a, b) => (b.margin < a.margin ? b : a)) : null
+  const profitableCount = months.filter(month => month.profit > 0).length
+
+  const width = 700
+  const height = 150
+  const groupWidth = width / months.length
+  const barWidth = Math.min(20, groupWidth * 0.5)
+  const maxAbs = Math.max(10, ...withMargin.map(month => Math.abs(month.margin ?? 0)))
+  const scaleY = (value: number) => height / 2 - (value / maxAbs) * (height / 2)
+  const baseline = height / 2
+
+  return <section className="panel projects-panel">
+    <div className="panel-head"><div><h2>Lucratividade</h2><p>Margem de lucro (lucro ÷ receita) mês a mês, últimos 12 meses</p></div></div>
+    <div className="kpi-grid">
+      <Kpi label="Margem média" value={`${avgMargin.toFixed(1)}%`} icon={Gauge} />
+      <Kpi label="Melhor mês" value={best ? `${formatMonth(best.month)} · ${best.margin.toFixed(1)}%` : '—'} icon={ArrowUpRight} />
+      <Kpi label="Pior mês" value={worst ? `${formatMonth(worst.month)} · ${worst.margin.toFixed(1)}%` : '—'} icon={ArrowDownRight} />
+      <Kpi label="Meses lucrativos" value={`${profitableCount}/${months.length}`} icon={Check} />
+    </div>
+    <div className="chart-wrap">
+      <svg className="chart" viewBox={`0 0 ${width} ${height + 20}`} preserveAspectRatio="none">
+        <line x1={0} y1={baseline} x2={width} y2={baseline} className="grid-line" />
+        {withMargin.map((month, index) => {
+          const value = month.margin ?? 0
+          const y = scaleY(value)
+          return <rect key={month.month} x={index * groupWidth + groupWidth / 2 - barWidth / 2} y={Math.min(y, baseline)} width={barWidth} height={Math.max(1, Math.abs(baseline - y))} rx={3} fill={value >= 0 ? 'var(--green)' : 'var(--red)'}><title>{`${formatMonth(month.month)}: ${month.margin === null ? 'sem receita' : `${month.margin.toFixed(1)}%`}`}</title></rect>
+        })}
+        {withMargin.map((month, index) => (index % 2 === 0 || months.length <= 6) && <text key={`${month.month}-margin-label`} x={index * groupWidth + groupWidth / 2} y={height + 14} textAnchor="middle" fontSize={9} fill="var(--muted-2)">{formatMonth(month.month)}</text>)}
+      </svg>
+    </div>
+  </section>
+}
+
 function App() {
   const [active, setActive] = useState('Visão geral')
   const [dark, setDark] = useState(true)
@@ -411,6 +449,7 @@ function App() {
           {active === 'Visão geral' && <>
             <div className="kpi-grid"><Kpi label="Projetos" value={String(summary.projects)} icon={FolderKanban} /><Kpi label="Receita total" value={money(summary.revenue)} icon={CircleDollarSign} /><Kpi label="Despesas" value={money(summary.expense)} icon={CreditCard} /><Kpi label="Lucro líquido" value={money(summary.profit)} positive={summary.profit >= 0} icon={BarChart3} /><Kpi label="ROI geral" value={summary.expense > 0 ? `${summary.roi.toFixed(1)}%` : '—'} positive={summary.roi >= 0} icon={Gauge} /></div>
             <div className="dashboard-grid"><section className="panel chart-panel"><div className="panel-head"><div><h2>Receita, despesa e lucro por mês</h2><p>Últimos 12 meses, por competência</p></div>{trend === 'up' ? <span className="trend positive"><ArrowUpRight size={14} /> Lucro em alta</span> : trend === 'down' ? <span className="trend negative"><ArrowDownRight size={14} /> Lucro em queda</span> : <span className="trend"><span style={{ color: 'var(--muted)' }}>Lucro estável</span></span>}</div>{months.length ? <MonthlyChart months={months} /> : <div className="empty-state"><div className="empty-icon"><BarChart3 size={24} /></div><h2>Sem movimentações financeiras</h2><p>Cadastre receitas e despesas para acompanhar a evolução financeira.</p></div>}</section><section className="panel insights-panel"><div className="panel-head"><div><h2>Insights</h2><p>Alertas calculados com os dados reais</p></div><span className="ai-spark"><Sparkles size={15} /></span></div>{attentionProject ? <div className="insight warning"><div className="insight-icon"><ShieldAlert size={17} /></div><div><b>Projeto em atenção</b><p>{attentionProject.name} está com margem de {attentionProject.margin.toFixed(1)}%.</p></div></div> : opportunityProject ? <div className="insight opportunity"><div className="insight-icon"><Lightbulb size={17} /></div><div><b>Boa margem identificada</b><p>{opportunityProject.name} apresenta margem de {opportunityProject.margin.toFixed(1)}%.</p></div></div> : <div className="empty-state"><p>Cadastre movimentações financeiras para gerar insights.</p></div>}</section></div>
+            {months.length > 0 && <ProfitabilityPanel months={months} />}
           </>}
           <section className="panel projects-panel"><div className="panel-head"><div><h2>Projetos</h2><p>Registros pertencentes ao usuário autenticado</p></div></div><div className="project-table"><div className="table-row table-head"><span>Projeto</span><span>Receita</span><span>Margem</span><span>Despesas</span><span>Status</span><span /></div>{loading ? <div className="empty-state"><p>Carregando dados...</p></div> : filteredProjects.length ? filteredProjects.map(project => <div className="table-row" key={project.id}><div className="project-name"><span className="project-dot" style={{ background: project.color }} /><div><b>{project.name?.trim() || '(sem nome)'}</b><small>{project.type}</small></div></div><span className="table-money">{money(project.revenue)}</span><span className={project.margin < 20 && project.revenue > 0 ? 'margin negative' : 'margin'}>{project.margin.toFixed(1)}%</span><span className="table-money">{money(project.expense)}</span><span className="status"><Check size={12} /> {statusLabels[project.status] ?? project.status}</span><span className="table-actions"><button className="row-more" onClick={() => setEditingProject(project)} aria-label="Alterar projeto" title="Alterar projeto"><Pencil size={15} /></button><button className="row-more" onClick={() => setDeletingProject(project)} aria-label="Excluir projeto" title="Excluir projeto"><Trash2 size={15} /></button></span></div>) : <div className="empty-state"><div className="empty-icon"><FolderKanban size={24} /></div><h2>Nenhum projeto cadastrado</h2><p>Crie seu primeiro projeto para começar a acompanhar os dados reais do portfólio.</p><button className="primary-btn" onClick={() => setShowModal(true)}><Plus size={16} /> Novo projeto</button></div>}</div></section>
         </>}
