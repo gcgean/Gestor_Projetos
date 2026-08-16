@@ -7,13 +7,15 @@ type FinanceInput = { projectId: string; category: string; description?: string;
 export class FinanceService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async revenues(ownerId: string) {
-    const rows = await this.prisma.revenue.findMany({ where: { project: { ownerId } }, include: { project: { select: { id: true, name: true } } }, orderBy: { competence: 'desc' } })
+  async revenues(ownerId: string, from?: string, to?: string) {
+    const competence = this.competenceRange(from, to)
+    const rows = await this.prisma.revenue.findMany({ where: { project: { ownerId }, ...(competence ? { competence } : {}) }, include: { project: { select: { id: true, name: true } } }, orderBy: { competence: 'desc' } })
     return rows.map(row => ({ ...row, amount: Number(row.amount) }))
   }
 
-  async expenses(ownerId: string) {
-    const rows = await this.prisma.expense.findMany({ where: { project: { ownerId } }, include: { project: { select: { id: true, name: true } } }, orderBy: { competence: 'desc' } })
+  async expenses(ownerId: string, from?: string, to?: string) {
+    const competence = this.competenceRange(from, to)
+    const rows = await this.prisma.expense.findMany({ where: { project: { ownerId }, ...(competence ? { competence } : {}) }, include: { project: { select: { id: true, name: true } } }, orderBy: { competence: 'desc' } })
     return rows.map(row => ({ ...row, amount: Number(row.amount) }))
   }
 
@@ -60,5 +62,13 @@ export class FinanceService {
     const date = new Date(`${value}T00:00:00.000Z`)
     if (Number.isNaN(date.getTime())) throw new BadRequestException('Data inválida')
     return date
+  }
+
+  private competenceRange(from?: string, to?: string) {
+    if (!from && !to) return null
+    const range: { gte?: Date; lte?: Date } = {}
+    if (from) range.gte = new Date(`${from}T00:00:00.000Z`)
+    if (to) range.lte = new Date(`${to}T23:59:59.999Z`)
+    return range
   }
 }

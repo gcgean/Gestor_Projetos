@@ -1,4 +1,4 @@
-import { Controller, Get, Req, UseGuards } from '@nestjs/common'
+import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common'
 import { JwtGuard } from '../auth/jwt.guard'
 import { DashboardService } from './dashboard.service'
 
@@ -6,5 +6,5 @@ import { DashboardService } from './dashboard.service'
 @UseGuards(JwtGuard)
 export class DashboardController {
   constructor(private readonly dashboard: DashboardService) {}
-  @Get('summary') summary(@Req() req: any) { return this.dashboard.summary(req.user.sub) }
+  @Get('summary') summary(@Req() req: any, @Query('from') from?: string, @Query('to') to?: string) { return this.dashboard.summary(req.user.sub, from, to) }
 }

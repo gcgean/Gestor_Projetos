@@ -14,6 +14,16 @@ export type ApiProject = {
 
 export type ApiFinanceEntry = { id: string; projectId: string; category: string; description?: string | null; amount: number; competence: string; receivedAt?: string | null; dueDate?: string | null; project: { id: string; name: string } }
 
+export type DateRange = { from?: string; to?: string }
+
+function query(range?: DateRange) {
+  if (!range || (!range.from && !range.to)) return ''
+  const params = new URLSearchParams()
+  if (range.from) params.set('from', range.from)
+  if (range.to) params.set('to', range.to)
+  return `?${params.toString()}`
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const token = localStorage.getItem('gestor_projetos_token')
   const response = await fetch(`${API_URL}${path}`, {
@@ -32,11 +42,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   login: (email: string, password: string) => request<{ accessToken: string; user: { id: string; email: string; role: string } }>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
-  projects: () => request<ApiProject[]>('/projects'),
+  projects: (range?: DateRange) => request<ApiProject[]>(`/projects${query(range)}`),
   createProject: (data: Pick<ApiProject, 'name' | 'type'> & Partial<Pick<ApiProject, 'description' | 'color' | 'status'>>) => request<ApiProject>('/projects', { method: 'POST', body: JSON.stringify(data) }),
-  dashboard: () => request<{ projects: number; revenue: number; expense: number; profit: number; roi: number }>('/dashboard/summary'),
-  revenues: () => request<ApiFinanceEntry[]>('/finance/revenues'),
-  expenses: () => request<ApiFinanceEntry[]>('/finance/expenses'),
+  dashboard: (range?: DateRange) => request<{ projects: number; revenue: number; expense: number; profit: number; roi: number }>(`/dashboard/summary${query(range)}`),
+  revenues: (range?: DateRange) => request<ApiFinanceEntry[]>(`/finance/revenues${query(range)}`),
+  expenses: (range?: DateRange) => request<ApiFinanceEntry[]>(`/finance/expenses${query(range)}`),
   createRevenue: (data: { projectId: string; category: string; description?: string; amount: number; competence: string; receivedAt?: string }) => request<ApiFinanceEntry>('/finance/revenues', { method: 'POST', body: JSON.stringify(data) }),
   createExpense: (data: { projectId: string; category: string; description?: string; amount: number; competence: string; dueDate?: string }) => request<ApiFinanceEntry>('/finance/expenses', { method: 'POST', body: JSON.stringify(data) }),
   deleteRevenue: (id: string) => request<{ deleted: boolean }>(`/finance/revenues/${id}`, { method: 'DELETE' }),
