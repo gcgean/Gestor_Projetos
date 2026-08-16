@@ -147,9 +147,8 @@ function FinancePage({ kind, projects, search, filters }: { kind: 'revenue' | 'e
   const [editing, setEditing] = useState<ApiFinanceEntry | null>(null)
   const [deleting, setDeleting] = useState<ApiFinanceEntry | null>(null)
   const [error, setError] = useState('')
-  const [categoryFilter, setCategoryFilter] = useState('')
   const label = kind === 'revenue' ? 'receita' : 'despesa'
-  const visibleEntries = entries.filter(entry => (!categoryFilter || entry.category === categoryFilter) && `${entry.project.name} ${entry.category} ${entry.description ?? ''}`.toLowerCase().includes(search.toLowerCase()))
+  const visibleEntries = entries.filter(entry => `${entry.project.name} ${entry.category} ${entry.description ?? ''}`.toLowerCase().includes(search.toLowerCase()))
   const lastCategoryKey = `gestor_projetos_last_category_${kind}`
   const emptyForm: FinanceFormData = { projectId: '', category: localStorage.getItem(lastCategoryKey) ?? '', description: '', amount: '', competence: todayLocal(), settlementDate: '' }
 
@@ -198,7 +197,7 @@ function FinancePage({ kind, projects, search, filters }: { kind: 'revenue' | 'e
   }
 
   return <section className="panel projects-panel finance-page">
-    <div className="panel-head"><div><h2>{kind === 'revenue' ? 'Receitas registradas' : 'Despesas registradas'}</h2><p>A competência define em que mês o valor entra no resultado.</p></div><div className="table-actions">{categories.length > 0 && <div className="mini-select"><select value={categoryFilter} onChange={event => setCategoryFilter(event.target.value)} aria-label="Filtrar por plano de contas"><option value="">Todas as categorias</option>{categories.map(category => <option key={category} value={category}>{category}</option>)}</select><ChevronDown size={14} /></div>}<button className="primary-btn" onClick={() => setShowForm(true)} disabled={!projects.length}><Plus size={16} /> Nova {label}</button></div></div>
+    <div className="panel-head"><div><h2>{kind === 'revenue' ? 'Receitas registradas' : 'Despesas registradas'}</h2><p>A competência define em que mês o valor entra no resultado.</p></div><button className="primary-btn" onClick={() => setShowForm(true)} disabled={!projects.length}><Plus size={16} /> Nova {label}</button></div>
     {error && <div className="login-error">{error}</div>}
     {!projects.length ? <div className="empty-state"><h2>Cadastre um projeto primeiro</h2><p>Uma {label} precisa estar vinculada a um projeto.</p></div>
       : loading ? <div className="empty-state"><p>Carregando lançamentos...</p></div>
@@ -317,7 +316,11 @@ function App() {
   const [active, setActive] = useState('Visão geral')
   const [dark, setDark] = useState(true)
   const [period, setPeriod] = useState('Últimos 12 meses')
+  const [customFrom, setCustomFrom] = useState('')
+  const [customTo, setCustomTo] = useState('')
   const [projectFilter, setProjectFilter] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState('')
+  const [allCategories, setAllCategories] = useState<string[]>([])
   const [search, setSearch] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [projects, setProjects] = useState<ApiProject[]>([])
@@ -333,13 +336,19 @@ function App() {
     try { return JSON.parse(localStorage.getItem('gestor_projetos_user') ?? '{}') as { email?: string; role?: string } } catch { return {} }
   }, [])
 
-  const filters = useMemo<Filters>(() => ({ ...periodRange(period), projectId: projectFilter || undefined }), [period, projectFilter])
+  const filters = useMemo<Filters>(() => ({
+    ...(period === 'Personalizado' ? { from: customFrom || undefined, to: customTo || undefined } : periodRange(period)),
+    projectId: projectFilter || undefined,
+    category: categoryFilter || undefined,
+  }), [period, customFrom, customTo, projectFilter, categoryFilter])
+
+  useEffect(() => { api.categories().then(setAllCategories).catch(() => {}) }, [])
 
   const loadData = useCallback(async () => {
     setLoading(true)
     setError('')
     try {
-      const [projectData, summaryData] = await Promise.all([api.projects(), api.dashboard(filters)])
+      const [projectData, summaryData] = await Promise.all([api.projects({ from: filters.from, to: filters.to, category: filters.category }), api.dashboard(filters)])
       setProjects(projectData)
       setSummary(summaryData)
     } catch (err) {
@@ -396,7 +405,7 @@ function App() {
     <main className="main">
       <header className="topbar"><div className="breadcrumbs"><span>Portfólio</span><span className="slash">/</span><b>{active}</b></div><div className="top-actions"><div className="search"><Search size={16} /><input aria-label="Pesquisar" placeholder="Pesquisar projetos e lançamentos" value={search} onChange={event => setSearch(event.target.value)} /><kbd><Command size={12} /> K</kbd></div><button className="icon-btn" onClick={() => setDark(!dark)} aria-label="Alternar tema">{dark ? <Sun size={17} /> : <Sun size={17} />}</button><button className="icon-btn notification" aria-label="Notificações"><Bell size={17} /></button><div className="top-avatar">{(user.email ?? 'AD').slice(0, 2).toUpperCase()}</div></div></header>
       <div className="content">
-        <section className="page-head"><div><h1>{active}</h1><p>Dados carregados do seu workspace.</p></div><div className="head-actions"><div className="mini-select"><select value={projectFilter} onChange={event => setProjectFilter(event.target.value)}><option value="">Todos os projetos</option>{projects.map(project => <option key={project.id} value={project.id}>{project.name}</option>)}</select><ChevronDown size={14} /></div><div className="select-wrap"><Clock3 size={15} /><select value={period} onChange={event => setPeriod(event.target.value)}><option>Últimos 12 meses</option><option>Este mês</option><option>Este trimestre</option></select><ChevronDown size={14} /></div>{active !== 'Receitas' && active !== 'Despesas' && <button className="primary-btn" onClick={() => setShowModal(true)}><Plus size={16} /> Novo projeto</button>}</div></section>
+        <section className="page-head"><div><h1>{active}</h1><p>Dados carregados do seu workspace.</p></div><div className="head-actions"><div className="mini-select"><select value={projectFilter} onChange={event => setProjectFilter(event.target.value)}><option value="">Todos os projetos</option>{projects.map(project => <option key={project.id} value={project.id}>{project.name}</option>)}</select><ChevronDown size={14} /></div>{allCategories.length > 0 && <div className="mini-select"><select value={categoryFilter} onChange={event => setCategoryFilter(event.target.value)} aria-label="Filtrar por plano de contas"><option value="">Todas as categorias</option>{allCategories.map(category => <option key={category} value={category}>{category}</option>)}</select><ChevronDown size={14} /></div>}<div className="select-wrap"><Clock3 size={15} /><select value={period} onChange={event => setPeriod(event.target.value)}><option>Últimos 12 meses</option><option>Este mês</option><option>Este trimestre</option><option>Personalizado</option></select><ChevronDown size={14} /></div>{period === 'Personalizado' && <><input type="date" value={customFrom} onChange={event => setCustomFrom(event.target.value)} className="custom-date" aria-label="Data inicial" /><input type="date" value={customTo} onChange={event => setCustomTo(event.target.value)} className="custom-date" aria-label="Data final" /></>}{active !== 'Receitas' && active !== 'Despesas' && <button className="primary-btn" onClick={() => setShowModal(true)}><Plus size={16} /> Novo projeto</button>}</div></section>
         {error && <div className="login-error">{error}</div>}
         {active === 'Receitas' ? <FinancePage kind="revenue" projects={projects} search={search} filters={filters} /> : active === 'Despesas' ? <FinancePage kind="expense" projects={projects} search={search} filters={filters} /> : active === 'Fluxo de caixa' ? <CashflowPage filters={filters} /> : active !== 'Visão geral' && active !== 'Projetos' ? <section className="empty-state panel"><div className="empty-icon"><BriefcaseBusiness size={24} /></div><h2>{active}</h2><p>Módulo em desenvolvimento.</p><button className="secondary-btn" onClick={() => setActive('Visão geral')}>Voltar para visão geral</button></section> : <>
           {active === 'Visão geral' && <>

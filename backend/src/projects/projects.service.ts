@@ -4,14 +4,14 @@ import { PrismaService } from '../prisma.service'
 @Injectable()
 export class ProjectsService {
   constructor(private readonly prisma: PrismaService) {}
-  async list(ownerId: string, from?: string, to?: string) {
+  async list(ownerId: string, from?: string, to?: string, category?: string) {
     const projects = await this.prisma.project.findMany({ where: { ownerId }, orderBy: { updatedAt: 'desc' } })
     const competence = this.competenceRange(from, to)
 
     return Promise.all(projects.map(async project => {
       const [revenues, expenses] = await Promise.all([
-        this.prisma.revenue.aggregate({ where: { projectId: project.id, ...(competence ? { competence } : {}) }, _sum: { amount: true } }),
-        this.prisma.expense.aggregate({ where: { projectId: project.id, ...(competence ? { competence } : {}) }, _sum: { amount: true } }),
+        this.prisma.revenue.aggregate({ where: { projectId: project.id, ...(category ? { category } : {}), ...(competence ? { competence } : {}) }, _sum: { amount: true } }),
+        this.prisma.expense.aggregate({ where: { projectId: project.id, ...(category ? { category } : {}), ...(competence ? { competence } : {}) }, _sum: { amount: true } }),
       ])
       const revenue = Number(revenues._sum.amount ?? 0)
       const expense = Number(expenses._sum.amount ?? 0)

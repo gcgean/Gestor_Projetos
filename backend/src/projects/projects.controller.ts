@@ -16,7 +16,7 @@ class CreateProjectDto {
 @UseGuards(JwtGuard)
 export class ProjectsController {
   constructor(private readonly projects: ProjectsService) {}
-  @Get() list(@Req() req: any, @Query('from') from?: string, @Query('to') to?: string) { return this.projects.list(req.user.sub, from, to) }
+  @Get() list(@Req() req: any, @Query('from') from?: string, @Query('to') to?: string, @Query('category') category?: string) { return this.projects.list(req.user.sub, from, to, category) }
   @Post() create(@Req() req: any, @Body() dto: CreateProjectDto) { return this.projects.create(req.user.sub, dto as any) }
   @Put(':id') update(@Req() req: any, @Param('id') id: string, @Body() dto: CreateProjectDto) { return this.projects.update(req.user.sub, id, dto as any) }
   @Delete(':id') remove(@Req() req: any, @Param('id') id: string) { return this.projects.remove(req.user.sub, id) }

@@ -14,7 +14,7 @@ export type ApiProject = {
 
 export type ApiFinanceEntry = { id: string; projectId: string; category: string; description?: string | null; amount: number; competence: string; receivedAt?: string | null; dueDate?: string | null; project: { id: string; name: string } }
 
-export type Filters = { from?: string; to?: string; projectId?: string }
+export type Filters = { from?: string; to?: string; projectId?: string; category?: string }
 
 export type CashflowMonth = { month: string; in: number; out: number; net: number; balance: number }
 export type CashflowMovement = { type: 'in' | 'out'; date: string; amount: number; category: string; project: string }
@@ -29,6 +29,7 @@ function query(filters?: Filters) {
   if (filters.from) params.set('from', filters.from)
   if (filters.to) params.set('to', filters.to)
   if (filters.projectId) params.set('projectId', filters.projectId)
+  if (filters.category) params.set('category', filters.category)
   const qs = params.toString()
   return qs ? `?${qs}` : ''
 }
@@ -51,12 +52,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   login: (email: string, password: string) => request<{ accessToken: string; user: { id: string; email: string; role: string } }>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
-  projects: () => request<ApiProject[]>('/projects'),
+  projects: (filters?: Pick<Filters, 'from' | 'to' | 'category'>) => request<ApiProject[]>(`/projects${query(filters)}`),
   createProject: (data: Pick<ApiProject, 'name' | 'type'> & Partial<Pick<ApiProject, 'description' | 'color' | 'status'>>) => request<ApiProject>('/projects', { method: 'POST', body: JSON.stringify(data) }),
   dashboard: (filters?: Filters) => request<{ projects: number; revenue: number; expense: number; profit: number; roi: number }>(`/dashboard/summary${query(filters)}`),
   cashflow: (filters?: Filters) => request<CashflowData>(`/dashboard/cashflow${query(filters)}`),
   monthly: (filters?: Filters) => request<MonthlyData>(`/dashboard/monthly${query(filters)}`),
-  categories: (kind: 'revenue' | 'expense') => request<string[]>(`/finance/categories?kind=${kind}`),
+  categories: (kind?: 'revenue' | 'expense') => request<string[]>(`/finance/categories${kind ? `?kind=${kind}` : ''}`),
   revenues: (filters?: Filters) => request<ApiFinanceEntry[]>(`/finance/revenues${query(filters)}`),
   expenses: (filters?: Filters) => request<ApiFinanceEntry[]>(`/finance/expenses${query(filters)}`),
   createRevenue: (data: { projectId: string; category: string; description?: string; amount: number; competence: string; receivedAt?: string }) => request<ApiFinanceEntry>('/finance/revenues', { method: 'POST', body: JSON.stringify(data) }),

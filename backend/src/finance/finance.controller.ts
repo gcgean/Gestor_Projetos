@@ -19,12 +19,12 @@ class CreateFinanceDto {
 export class FinanceController {
   constructor(private readonly finance: FinanceService) {}
 
-  @Get('categories') categories(@Req() req: any, @Query('kind') kind: 'revenue' | 'expense') { return this.finance.categories(req.user.sub, kind) }
-  @Get('revenues') revenues(@Req() req: any, @Query('from') from?: string, @Query('to') to?: string, @Query('projectId') projectId?: string) { return this.finance.revenues(req.user.sub, from, to, projectId) }
+  @Get('categories') categories(@Req() req: any, @Query('kind') kind?: 'revenue' | 'expense') { return this.finance.categories(req.user.sub, kind) }
+  @Get('revenues') revenues(@Req() req: any, @Query('from') from?: string, @Query('to') to?: string, @Query('projectId') projectId?: string, @Query('category') category?: string) { return this.finance.revenues(req.user.sub, from, to, projectId, category) }
   @Post('revenues') createRevenue(@Req() req: any, @Body() dto: CreateFinanceDto) { return this.finance.createRevenue(req.user.sub, dto) }
   @Delete('revenues/:id') deleteRevenue(@Req() req: any, @Param('id') id: string) { return this.finance.deleteRevenue(req.user.sub, id) }
   @Put('revenues/:id') updateRevenue(@Req() req: any, @Param('id') id: string, @Body() dto: CreateFinanceDto) { return this.finance.updateRevenue(req.user.sub, id, dto) }
-  @Get('expenses') expenses(@Req() req: any, @Query('from') from?: string, @Query('to') to?: string, @Query('projectId') projectId?: string) { return this.finance.expenses(req.user.sub, from, to, projectId) }
+  @Get('expenses') expenses(@Req() req: any, @Query('from') from?: string, @Query('to') to?: string, @Query('projectId') projectId?: string, @Query('category') category?: string) { return this.finance.expenses(req.user.sub, from, to, projectId, category) }
   @Post('expenses') createExpense(@Req() req: any, @Body() dto: CreateFinanceDto) { return this.finance.createExpense(req.user.sub, dto) }
   @Delete('expenses/:id') deleteExpense(@Req() req: any, @Param('id') id: string) { return this.finance.deleteExpense(req.user.sub, id) }
   @Put('expenses/:id') updateExpense(@Req() req: any, @Param('id') id: string, @Body() dto: CreateFinanceDto) { return this.finance.updateExpense(req.user.sub, id, dto) }

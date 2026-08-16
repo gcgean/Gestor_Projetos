@@ -7,21 +7,21 @@ type FinanceInput = { projectId: string; category: string; description?: string;
 export class FinanceService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async revenues(ownerId: string, from?: string, to?: string, projectId?: string) {
+  async revenues(ownerId: string, from?: string, to?: string, projectId?: string, category?: string) {
     const competence = this.competenceRange(from, to)
-    const rows = await this.prisma.revenue.findMany({ where: { project: { ownerId }, ...(projectId ? { projectId } : {}), ...(competence ? { competence } : {}) }, include: { project: { select: { id: true, name: true } } }, orderBy: { competence: 'desc' } })
+    const rows = await this.prisma.revenue.findMany({ where: { project: { ownerId }, ...(projectId ? { projectId } : {}), ...(category ? { category } : {}), ...(competence ? { competence } : {}) }, include: { project: { select: { id: true, name: true } } }, orderBy: { competence: 'desc' } })
     return rows.map(row => ({ ...row, amount: Number(row.amount) }))
   }
 
-  async expenses(ownerId: string, from?: string, to?: string, projectId?: string) {
+  async expenses(ownerId: string, from?: string, to?: string, projectId?: string, category?: string) {
     const competence = this.competenceRange(from, to)
-    const rows = await this.prisma.expense.findMany({ where: { project: { ownerId }, ...(projectId ? { projectId } : {}), ...(competence ? { competence } : {}) }, include: { project: { select: { id: true, name: true } } }, orderBy: { competence: 'desc' } })
+    const rows = await this.prisma.expense.findMany({ where: { project: { ownerId }, ...(projectId ? { projectId } : {}), ...(category ? { category } : {}), ...(competence ? { competence } : {}) }, include: { project: { select: { id: true, name: true } } }, orderBy: { competence: 'desc' } })
     return rows.map(row => ({ ...row, amount: Number(row.amount) }))
   }
 
-  async categories(ownerId: string, kind: 'revenue' | 'expense') {
-    const rows = await this.prisma.category.findMany({ where: { ownerId, kind: kind === 'revenue' ? 'REVENUE' : 'EXPENSE' }, orderBy: { name: 'asc' } })
-    return rows.map(row => row.name)
+  async categories(ownerId: string, kind?: 'revenue' | 'expense') {
+    const rows = await this.prisma.category.findMany({ where: { ownerId, ...(kind ? { kind: kind === 'revenue' ? 'REVENUE' : 'EXPENSE' } : {}) }, orderBy: { name: 'asc' } })
+    return [...new Set(rows.map(row => row.name))].sort((a, b) => a.localeCompare(b))
   }
 
   async createRevenue(ownerId: string, data: FinanceInput) {
