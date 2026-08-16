@@ -140,7 +140,8 @@ function FinancePage({ kind, projects, search, range }: { kind: 'revenue' | 'exp
   const [error, setError] = useState('')
   const label = kind === 'revenue' ? 'receita' : 'despesa'
   const visibleEntries = entries.filter(entry => `${entry.project.name} ${entry.category} ${entry.description ?? ''}`.toLowerCase().includes(search.toLowerCase()))
-  const emptyForm: FinanceFormData = { projectId: '', category: '', description: '', amount: '', competence: todayLocal(), settlementDate: '' }
+  const lastCategoryKey = `gestor_projetos_last_category_${kind}`
+  const emptyForm: FinanceFormData = { projectId: '', category: localStorage.getItem(lastCategoryKey) ?? '', description: '', amount: '', competence: todayLocal(), settlementDate: '' }
 
   const loadEntries = useCallback(async () => {
     setLoading(true)
@@ -158,6 +159,7 @@ function FinancePage({ kind, projects, search, range }: { kind: 'revenue' | 'exp
       const payload = { projectId: data.projectId, category: data.category.trim(), description: data.description || undefined, amount, competence: data.competence }
       if (kind === 'revenue') await api.createRevenue({ ...payload, receivedAt: data.settlementDate || undefined })
       else await api.createExpense({ ...payload, dueDate: data.settlementDate || undefined })
+      localStorage.setItem(lastCategoryKey, payload.category)
       setShowForm(false)
       await loadEntries()
     } catch (err) { setError(err instanceof Error ? err.message : `Não foi possível salvar a ${label}.`) } finally { setSaving(false) }
