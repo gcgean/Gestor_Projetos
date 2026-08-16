@@ -28,6 +28,13 @@ function money(value: number) {
   return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
+// Aceita tanto "1465.20" (ponto decimal) quanto "1.465,20" (formato BR, ponto de milhar + vírgula decimal).
+function parseAmount(value: string) {
+  const trimmed = value.trim()
+  if (trimmed.includes(',')) return Number(trimmed.replace(/\./g, '').replace(',', '.'))
+  return Number(trimmed)
+}
+
 // Datas de competência são tratadas como string pura ("YYYY-MM-DD"), nunca via `new Date(iso)`,
 // para não sofrer deslocamento de fuso horário (UTC x America/Sao_Paulo) na exibição.
 function formatDate(value?: string | null) {
@@ -114,7 +121,7 @@ function FinanceModal({ kind, projects, title, submitLabel, initial, saving, err
       {error && <div className="login-error">{error}</div>}
       <label>Projeto<select value={data.projectId} onChange={event => setData({ ...data, projectId: event.target.value })} required><option value="">Selecione um projeto</option>{projects.map(project => <option key={project.id} value={project.id}>{project.name}</option>)}</select></label>
       <label>Categoria<input value={data.category} onChange={event => setData({ ...data, category: event.target.value })} placeholder={kind === 'revenue' ? 'Ex.: Venda, mensalidade' : 'Ex.: Marketing, operação'} required /></label>
-      <label>Valor<input type="number" min="0.01" step="0.01" value={data.amount} onChange={event => setData({ ...data, amount: event.target.value })} placeholder="0,00" required /></label>
+      <label>Valor<input type="text" inputMode="decimal" value={data.amount} onChange={event => setData({ ...data, amount: event.target.value })} placeholder="0,00" required /></label>
       <label>Data de geração / competência<input type="date" value={data.competence} onChange={event => setData({ ...data, competence: event.target.value })} required /></label>
       <label>{kind === 'revenue' ? 'Data de recebimento (opcional)' : 'Data de vencimento (opcional)'}<input type="date" value={data.settlementDate} onChange={event => setData({ ...data, settlementDate: event.target.value })} /></label>
       <label>Descrição<input value={data.description} onChange={event => setData({ ...data, description: event.target.value })} placeholder="Opcional" /></label>
@@ -143,10 +150,12 @@ function FinancePage({ kind, projects, search, range }: { kind: 'revenue' | 'exp
   useEffect(() => { void loadEntries() }, [loadEntries])
 
   async function create(data: FinanceFormData) {
+    const amount = parseAmount(data.amount)
+    if (!amount || amount <= 0) { setError('Informe um valor válido.'); return }
     setSaving(true)
     setError('')
     try {
-      const payload = { projectId: data.projectId, category: data.category.trim(), description: data.description || undefined, amount: Number(data.amount), competence: data.competence }
+      const payload = { projectId: data.projectId, category: data.category.trim(), description: data.description || undefined, amount, competence: data.competence }
       if (kind === 'revenue') await api.createRevenue({ ...payload, receivedAt: data.settlementDate || undefined })
       else await api.createExpense({ ...payload, dueDate: data.settlementDate || undefined })
       setShowForm(false)
@@ -156,10 +165,12 @@ function FinancePage({ kind, projects, search, range }: { kind: 'revenue' | 'exp
 
   async function saveEdit(data: FinanceFormData) {
     if (!editing) return
+    const amount = parseAmount(data.amount)
+    if (!amount || amount <= 0) { setError('Informe um valor válido.'); return }
     setSaving(true)
     setError('')
     try {
-      const payload = { projectId: data.projectId, category: data.category.trim(), description: data.description || undefined, amount: Number(data.amount), competence: data.competence, ...(kind === 'revenue' ? { receivedAt: data.settlementDate || undefined } : { dueDate: data.settlementDate || undefined }) }
+      const payload = { projectId: data.projectId, category: data.category.trim(), description: data.description || undefined, amount, competence: data.competence, ...(kind === 'revenue' ? { receivedAt: data.settlementDate || undefined } : { dueDate: data.settlementDate || undefined }) }
       if (kind === 'revenue') await api.updateRevenue(editing.id, payload); else await api.updateExpense(editing.id, payload)
       setEditing(null)
       await loadEntries()
