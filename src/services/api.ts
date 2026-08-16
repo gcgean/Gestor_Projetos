@@ -45,6 +45,7 @@ export const api = {
   projects: (range?: DateRange) => request<ApiProject[]>(`/projects${query(range)}`),
   createProject: (data: Pick<ApiProject, 'name' | 'type'> & Partial<Pick<ApiProject, 'description' | 'color' | 'status'>>) => request<ApiProject>('/projects', { method: 'POST', body: JSON.stringify(data) }),
   dashboard: (range?: DateRange) => request<{ projects: number; revenue: number; expense: number; profit: number; roi: number }>(`/dashboard/summary${query(range)}`),
+  categories: (kind: 'revenue' | 'expense') => request<string[]>(`/finance/categories?kind=${kind}`),
   revenues: (range?: DateRange) => request<ApiFinanceEntry[]>(`/finance/revenues${query(range)}`),
   expenses: (range?: DateRange) => request<ApiFinanceEntry[]>(`/finance/expenses${query(range)}`),
   createRevenue: (data: { projectId: string; category: string; description?: string; amount: number; competence: string; receivedAt?: string }) => request<ApiFinanceEntry>('/finance/revenues', { method: 'POST', body: JSON.stringify(data) }),

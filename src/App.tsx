@@ -109,18 +109,19 @@ function ProjectModal({ title, submitLabel, initial, saving, error, onSubmit, on
 
 type FinanceFormData = { projectId: string; category: string; description: string; amount: string; competence: string; settlementDate: string }
 
-function FinanceModal({ kind, projects, title, submitLabel, initial, saving, error, onSubmit, onClose }: {
-  kind: 'revenue' | 'expense'; projects: ApiProject[]; title: string; submitLabel: string
+function FinanceModal({ kind, projects, categories, title, submitLabel, initial, saving, error, onSubmit, onClose }: {
+  kind: 'revenue' | 'expense'; projects: ApiProject[]; categories: string[]; title: string; submitLabel: string
   initial: FinanceFormData; saving: boolean; error: string
   onSubmit: (data: FinanceFormData) => void; onClose: () => void
 }) {
   const [data, setData] = useState(initial)
+  const datalistId = `${kind}-categories`
   return <div className="modal-backdrop">
     <form className="modal panel" onSubmit={event => { event.preventDefault(); onSubmit(data) }}>
       <div className="modal-head"><div><h2>{title}</h2><p>O lançamento será salvo no PostgreSQL.</p></div><button type="button" className="icon-btn" onClick={onClose}><X size={17} /></button></div>
       {error && <div className="login-error">{error}</div>}
       <label>Projeto<select value={data.projectId} onChange={event => setData({ ...data, projectId: event.target.value })} required><option value="">Selecione um projeto</option>{projects.map(project => <option key={project.id} value={project.id}>{project.name}</option>)}</select></label>
-      <label>Categoria<input value={data.category} onChange={event => setData({ ...data, category: event.target.value })} placeholder={kind === 'revenue' ? 'Ex.: Venda, mensalidade' : 'Ex.: Marketing, operação'} required /></label>
+      <label>Categoria<input value={data.category} onChange={event => setData({ ...data, category: event.target.value })} placeholder={kind === 'revenue' ? 'Ex.: Venda, mensalidade' : 'Ex.: Marketing, operação'} list={datalistId} required /><datalist id={datalistId}>{categories.map(category => <option key={category} value={category} />)}</datalist></label>
       <label>Valor<input type="text" inputMode="decimal" value={data.amount} onChange={event => setData({ ...data, amount: event.target.value })} placeholder="0,00" required /></label>
       <label>Data de geração / competência<input type="date" value={data.competence} onChange={event => setData({ ...data, competence: event.target.value })} required /></label>
       <label>{kind === 'revenue' ? 'Data de recebimento (opcional)' : 'Data de vencimento (opcional)'}<input type="date" value={data.settlementDate} onChange={event => setData({ ...data, settlementDate: event.target.value })} /></label>
@@ -132,6 +133,7 @@ function FinanceModal({ kind, projects, title, submitLabel, initial, saving, err
 
 function FinancePage({ kind, projects, search, range }: { kind: 'revenue' | 'expense'; projects: ApiProject[]; search: string; range: DateRange }) {
   const [entries, setEntries] = useState<ApiFinanceEntry[]>([])
+  const [categories, setCategories] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [showForm, setShowForm] = useState(false)
@@ -149,6 +151,7 @@ function FinancePage({ kind, projects, search, range }: { kind: 'revenue' | 'exp
   }, [kind, label, range])
 
   useEffect(() => { void loadEntries() }, [loadEntries])
+  useEffect(() => { api.categories(kind).then(setCategories).catch(() => {}) }, [kind])
 
   async function create(data: FinanceFormData) {
     const amount = parseAmount(data.amount)
@@ -160,6 +163,7 @@ function FinancePage({ kind, projects, search, range }: { kind: 'revenue' | 'exp
       if (kind === 'revenue') await api.createRevenue({ ...payload, receivedAt: data.settlementDate || undefined })
       else await api.createExpense({ ...payload, dueDate: data.settlementDate || undefined })
       localStorage.setItem(lastCategoryKey, payload.category)
+      setCategories(current => current.includes(payload.category) ? current : [...current, payload.category].sort())
       setShowForm(false)
       await loadEntries()
     } catch (err) { setError(err instanceof Error ? err.message : `Não foi possível salvar a ${label}.`) } finally { setSaving(false) }
@@ -205,8 +209,8 @@ function FinancePage({ kind, projects, search, range }: { kind: 'revenue' | 'exp
           </div>)}
         </div>
       : <div className="empty-state"><div className="empty-icon"><CircleDollarSign size={24} /></div><h2>Nenhuma {label} cadastrada</h2><p>Registre o primeiro lançamento para alimentar o dashboard.</p><button className="primary-btn" onClick={() => setShowForm(true)}><Plus size={16} /> Nova {label}</button></div>}
-    {showForm && <FinanceModal kind={kind} projects={projects} title={`Nova ${label}`} submitLabel="Salvar lançamento" initial={emptyForm} saving={saving} error={error} onSubmit={create} onClose={() => setShowForm(false)} />}
-    {editing && <FinanceModal kind={kind} projects={projects} title={`Alterar ${label}`} submitLabel="Salvar alterações" saving={saving} error={error} onClose={() => setEditing(null)} onSubmit={saveEdit}
+    {showForm && <FinanceModal kind={kind} projects={projects} categories={categories} title={`Nova ${label}`} submitLabel="Salvar lançamento" initial={emptyForm} saving={saving} error={error} onSubmit={create} onClose={() => setShowForm(false)} />}
+    {editing && <FinanceModal kind={kind} projects={projects} categories={categories} title={`Alterar ${label}`} submitLabel="Salvar alterações" saving={saving} error={error} onClose={() => setEditing(null)} onSubmit={saveEdit}
       initial={{ projectId: editing.projectId, category: editing.category, description: editing.description ?? '', amount: String(editing.amount), competence: editing.competence.slice(0, 10), settlementDate: ((kind === 'revenue' ? editing.receivedAt : editing.dueDate) ?? '').slice(0, 10) }} />}
     {deleting && <ConfirmDialog title={`Excluir ${label}?`} message="Esta ação não pode ser desfeita." confirmLabel="Excluir" onConfirm={confirmDelete} onCancel={() => setDeleting(null)} />}
   </section>

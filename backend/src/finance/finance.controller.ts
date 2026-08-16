@@ -19,6 +19,7 @@ class CreateFinanceDto {
 export class FinanceController {
   constructor(private readonly finance: FinanceService) {}
 
+  @Get('categories') categories(@Req() req: any, @Query('kind') kind: 'revenue' | 'expense') { return this.finance.categories(req.user.sub, kind) }
   @Get('revenues') revenues(@Req() req: any, @Query('from') from?: string, @Query('to') to?: string) { return this.finance.revenues(req.user.sub, from, to) }
   @Post('revenues') createRevenue(@Req() req: any, @Body() dto: CreateFinanceDto) { return this.finance.createRevenue(req.user.sub, dto) }
   @Delete('revenues/:id') deleteRevenue(@Req() req: any, @Param('id') id: string) { return this.finance.deleteRevenue(req.user.sub, id) }

@@ -19,15 +19,22 @@ export class FinanceService {
     return rows.map(row => ({ ...row, amount: Number(row.amount) }))
   }
 
+  async categories(ownerId: string, kind: 'revenue' | 'expense') {
+    const rows = await this.prisma.category.findMany({ where: { ownerId, kind: kind === 'revenue' ? 'REVENUE' : 'EXPENSE' }, orderBy: { name: 'asc' } })
+    return rows.map(row => row.name)
+  }
+
   async createRevenue(ownerId: string, data: FinanceInput) {
     await this.ensureProject(ownerId, data.projectId)
     const row = await this.prisma.revenue.create({ data: { projectId: data.projectId, category: data.category, description: data.description, amount: data.amount, competence: this.date(data.competence), receivedAt: data.receivedAt ? this.date(data.receivedAt) : undefined }, include: { project: { select: { id: true, name: true } } } })
+    await this.upsertCategory(ownerId, 'REVENUE', data.category)
     return { ...row, amount: Number(row.amount) }
   }
 
   async createExpense(ownerId: string, data: FinanceInput) {
     await this.ensureProject(ownerId, data.projectId)
     const row = await this.prisma.expense.create({ data: { projectId: data.projectId, category: data.category, description: data.description, amount: data.amount, competence: this.date(data.competence), dueDate: data.dueDate ? this.date(data.dueDate) : undefined }, include: { project: { select: { id: true, name: true } } } })
+    await this.upsertCategory(ownerId, 'EXPENSE', data.category)
     return { ...row, amount: Number(row.amount) }
   }
 
@@ -45,17 +52,23 @@ export class FinanceService {
   async updateRevenue(ownerId: string, id: string, data: FinanceInput) {
     const result = await this.prisma.revenue.updateMany({ where: { id, project: { ownerId } }, data: { projectId: data.projectId, category: data.category, description: data.description, amount: data.amount, competence: this.date(data.competence), receivedAt: data.receivedAt ? this.date(data.receivedAt) : null } })
     if (!result.count) throw new NotFoundException('Receita não encontrada')
+    await this.upsertCategory(ownerId, 'REVENUE', data.category)
     return { updated: true }
   }
   async updateExpense(ownerId: string, id: string, data: FinanceInput) {
     const result = await this.prisma.expense.updateMany({ where: { id, project: { ownerId } }, data: { projectId: data.projectId, category: data.category, description: data.description, amount: data.amount, competence: this.date(data.competence), dueDate: data.dueDate ? this.date(data.dueDate) : null } })
     if (!result.count) throw new NotFoundException('Despesa não encontrada')
+    await this.upsertCategory(ownerId, 'EXPENSE', data.category)
     return { updated: true }
   }
 
   private async ensureProject(ownerId: string, projectId: string) {
     const project = await this.prisma.project.findFirst({ where: { id: projectId, ownerId }, select: { id: true } })
     if (!project) throw new NotFoundException('Projeto não encontrado')
+  }
+
+  private async upsertCategory(ownerId: string, kind: 'REVENUE' | 'EXPENSE', name: string) {
+    await this.prisma.category.upsert({ where: { ownerId_kind_name: { ownerId, kind, name } }, create: { ownerId, kind, name }, update: {} })
   }
 
   private date(value: string) {
