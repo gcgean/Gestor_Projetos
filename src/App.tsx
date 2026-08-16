@@ -28,6 +28,13 @@ function money(value: number) {
   return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
+function moneyCompact(value: number) {
+  const abs = Math.abs(value)
+  const sign = value < 0 ? '-' : ''
+  if (abs >= 1000) return `${sign}R$${(abs / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}mil`
+  return `${sign}R$${abs.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`
+}
+
 // Aceita tanto "1465.20" (ponto decimal) quanto "1.465,20" (formato BR, ponto de milhar + vírgula decimal).
 function parseAmount(value: string) {
   const trimmed = value.trim()
@@ -313,39 +320,42 @@ function MonthlyChart({ months }: { months: MonthlySummary[] }) {
 }
 
 function ProfitabilityPanel({ months }: { months: MonthlySummary[] }) {
-  const withMargin = months.map(month => ({ ...month, margin: month.revenue > 0 ? (month.profit / month.revenue) * 100 : null }))
-  const validMonths = withMargin.filter((month): month is MonthlySummary & { margin: number } => month.margin !== null)
-  const avgMargin = validMonths.length ? validMonths.reduce((sum, month) => sum + month.margin, 0) / validMonths.length : 0
-  const avgProfit = validMonths.length ? validMonths.reduce((sum, month) => sum + month.profit, 0) / validMonths.length : 0
-  const best = validMonths.length ? validMonths.reduce((a, b) => (b.margin > a.margin ? b : a)) : null
-  const worst = validMonths.length ? validMonths.reduce((a, b) => (b.margin < a.margin ? b : a)) : null
+  const avgProfit = months.length ? months.reduce((sum, month) => sum + month.profit, 0) / months.length : 0
+  const best = months.length ? months.reduce((a, b) => (b.profit > a.profit ? b : a)) : null
+  const worst = months.length ? months.reduce((a, b) => (b.profit < a.profit ? b : a)) : null
   const profitableCount = months.filter(month => month.profit > 0).length
 
   const width = 700
-  const height = 150
+  const barsHeight = 130
+  const topPad = 14
   const groupWidth = width / months.length
   const barWidth = Math.min(20, groupWidth * 0.5)
-  const maxAbs = Math.max(10, ...withMargin.map(month => Math.abs(month.margin ?? 0)))
-  const scaleY = (value: number) => height / 2 - (value / maxAbs) * (height / 2)
-  const baseline = height / 2
+  const maxAbs = Math.max(1, ...months.map(month => Math.abs(month.profit)))
+  const scaleY = (value: number) => topPad + barsHeight / 2 - (value / maxAbs) * (barsHeight / 2)
+  const baseline = topPad + barsHeight / 2
 
   return <section className="panel projects-panel">
-    <div className="panel-head"><div><h2>Lucratividade</h2><p>Margem de lucro (lucro ÷ receita) mês a mês, últimos 12 meses</p></div></div>
+    <div className="panel-head"><div><h2>Lucratividade</h2><p>Lucro (receita − despesa) mês a mês, últimos 12 meses</p></div></div>
     <div className="kpi-grid">
-      <Kpi label="Lucro médio mensal" value={money(avgProfit)} change={`${avgMargin.toFixed(1)}% de margem`} positive={avgMargin >= 0} icon={Gauge} />
-      <Kpi label="Melhor mês" value={best ? money(best.profit) : '—'} change={best ? `${formatMonth(best.month)} · ${best.margin.toFixed(1)}%` : undefined} positive icon={ArrowUpRight} />
-      <Kpi label="Pior mês" value={worst ? money(worst.profit) : '—'} change={worst ? `${formatMonth(worst.month)} · ${worst.margin.toFixed(1)}%` : undefined} positive={worst ? worst.margin >= 0 : undefined} icon={ArrowDownRight} />
+      <Kpi label="Lucro médio mensal" value={money(avgProfit)} icon={Gauge} />
+      <Kpi label="Melhor mês" value={best ? money(best.profit) : '—'} change={best ? formatMonth(best.month) : undefined} positive icon={ArrowUpRight} />
+      <Kpi label="Pior mês" value={worst ? money(worst.profit) : '—'} change={worst ? formatMonth(worst.month) : undefined} positive={worst ? worst.profit >= 0 : undefined} icon={ArrowDownRight} />
       <Kpi label="Meses lucrativos" value={`${profitableCount}/${months.length}`} icon={Check} />
     </div>
     <div className="chart-wrap">
-      <svg className="chart" viewBox={`0 0 ${width} ${height + 20}`} preserveAspectRatio="none">
+      <svg className="chart" viewBox={`0 0 ${width} ${topPad + barsHeight + 34}`} preserveAspectRatio="none">
         <line x1={0} y1={baseline} x2={width} y2={baseline} className="grid-line" />
-        {withMargin.map((month, index) => {
-          const value = month.margin ?? 0
-          const y = scaleY(value)
-          return <rect key={month.month} x={index * groupWidth + groupWidth / 2 - barWidth / 2} y={Math.min(y, baseline)} width={barWidth} height={Math.max(1, Math.abs(baseline - y))} rx={3} fill={value >= 0 ? 'var(--green)' : 'var(--red)'}><title>{`${formatMonth(month.month)}: ${month.margin === null ? 'sem receita' : `${money(month.profit)} · ${month.margin.toFixed(1)}%`}`}</title></rect>
+        {months.map((month, index) => {
+          const y = scaleY(month.profit)
+          const top = Math.min(y, baseline)
+          const barHeight = Math.max(1, Math.abs(baseline - y))
+          const labelY = month.profit >= 0 ? top - 5 : top + barHeight + 11
+          return <g key={month.month}>
+            <rect x={index * groupWidth + groupWidth / 2 - barWidth / 2} y={top} width={barWidth} height={barHeight} rx={3} fill={month.profit >= 0 ? 'var(--green)' : 'var(--red)'}><title>{`${formatMonth(month.month)}: ${money(month.profit)}`}</title></rect>
+            <text x={index * groupWidth + groupWidth / 2} y={labelY} textAnchor="middle" fontSize={8} fill="var(--muted-2)">{moneyCompact(month.profit)}</text>
+          </g>
         })}
-        {withMargin.map((month, index) => (index % 2 === 0 || months.length <= 6) && <text key={`${month.month}-margin-label`} x={index * groupWidth + groupWidth / 2} y={height + 14} textAnchor="middle" fontSize={9} fill="var(--muted-2)">{formatMonth(month.month)}</text>)}
+        {months.map((month, index) => (index % 2 === 0 || months.length <= 6) && <text key={`${month.month}-margin-label`} x={index * groupWidth + groupWidth / 2} y={topPad + barsHeight + 28} textAnchor="middle" fontSize={9} fill="var(--muted-2)">{formatMonth(month.month)}</text>)}
       </svg>
     </div>
   </section>
