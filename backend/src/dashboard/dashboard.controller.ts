@@ -6,7 +6,7 @@ import { DashboardService } from './dashboard.service'
 @UseGuards(JwtGuard)
 export class DashboardController {
   constructor(private readonly dashboard: DashboardService) {}
-  @Get('summary') summary(@Req() req: any, @Query('from') from?: string, @Query('to') to?: string) { return this.dashboard.summary(req.user.sub, from, to) }
-  @Get('cashflow') cashflow(@Req() req: any, @Query('from') from?: string, @Query('to') to?: string) { return this.dashboard.cashflow(req.user.sub, from, to) }
-  @Get('monthly') monthly(@Req() req: any) { return this.dashboard.monthly(req.user.sub) }
+  @Get('summary') summary(@Req() req: any, @Query('from') from?: string, @Query('to') to?: string, @Query('projectId') projectId?: string) { return this.dashboard.summary(req.user.sub, from, to, projectId) }
+  @Get('cashflow') cashflow(@Req() req: any, @Query('from') from?: string, @Query('to') to?: string, @Query('projectId') projectId?: string) { return this.dashboard.cashflow(req.user.sub, from, to, projectId) }
+  @Get('monthly') monthly(@Req() req: any, @Query('projectId') projectId?: string) { return this.dashboard.monthly(req.user.sub, projectId) }
 }

@@ -5,7 +5,7 @@ import {
   FileText, FolderKanban, Gauge, Grid2X2, HelpCircle, Lightbulb, MoreHorizontal,
   Pencil, Plus, Search, Settings2, ShieldAlert, Sparkles, Sun, Target, Trash2, WalletCards, X,
 } from 'lucide-react'
-import { api, ApiFinanceEntry, ApiProject, CashflowData, DateRange, MonthlySummary } from './services/api'
+import { api, ApiFinanceEntry, ApiProject, CashflowData, Filters, MonthlySummary } from './services/api'
 
 type Summary = { projects: number; revenue: number; expense: number; profit: number; roi: number }
 
@@ -65,7 +65,7 @@ function toISODate(date: Date) {
   return `${year}-${month}-${day}`
 }
 
-function periodRange(period: string): DateRange {
+function periodRange(period: string): Filters {
   const now = new Date()
   if (period === 'Este mês') {
     return { from: toISODate(new Date(now.getFullYear(), now.getMonth(), 1)), to: toISODate(new Date(now.getFullYear(), now.getMonth() + 1, 0)) }
@@ -138,7 +138,7 @@ function FinanceModal({ kind, projects, categories, title, submitLabel, initial,
   </div>
 }
 
-function FinancePage({ kind, projects, search, range }: { kind: 'revenue' | 'expense'; projects: ApiProject[]; search: string; range: DateRange }) {
+function FinancePage({ kind, projects, search, filters }: { kind: 'revenue' | 'expense'; projects: ApiProject[]; search: string; filters: Filters }) {
   const [entries, setEntries] = useState<ApiFinanceEntry[]>([])
   const [categories, setCategories] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
@@ -154,8 +154,8 @@ function FinancePage({ kind, projects, search, range }: { kind: 'revenue' | 'exp
 
   const loadEntries = useCallback(async () => {
     setLoading(true)
-    try { setEntries(kind === 'revenue' ? await api.revenues(range) : await api.expenses(range)) } catch (err) { setError(err instanceof Error ? err.message : `Não foi possível carregar as ${label}s.`) } finally { setLoading(false) }
-  }, [kind, label, range])
+    try { setEntries(kind === 'revenue' ? await api.revenues(filters) : await api.expenses(filters)) } catch (err) { setError(err instanceof Error ? err.message : `Não foi possível carregar as ${label}s.`) } finally { setLoading(false) }
+  }, [kind, label, filters])
 
   useEffect(() => { void loadEntries() }, [loadEntries])
   useEffect(() => { api.categories(kind).then(setCategories).catch(() => {}) }, [kind])
@@ -223,7 +223,7 @@ function FinancePage({ kind, projects, search, range }: { kind: 'revenue' | 'exp
   </section>
 }
 
-function CashflowPage({ range }: { range: DateRange }) {
+function CashflowPage({ filters }: { filters: Filters }) {
   const [data, setData] = useState<CashflowData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -231,8 +231,8 @@ function CashflowPage({ range }: { range: DateRange }) {
   useEffect(() => {
     setLoading(true)
     setError('')
-    api.cashflow(range).then(setData).catch(err => setError(err instanceof Error ? err.message : 'Não foi possível carregar o fluxo de caixa.')).finally(() => setLoading(false))
-  }, [range])
+    api.cashflow(filters).then(setData).catch(err => setError(err instanceof Error ? err.message : 'Não foi possível carregar o fluxo de caixa.')).finally(() => setLoading(false))
+  }, [filters])
 
   if (loading) return <div className="empty-state panel"><p>Carregando fluxo de caixa...</p></div>
   if (error) return <div className="login-error">{error}</div>
@@ -316,7 +316,7 @@ function App() {
   const [active, setActive] = useState('Visão geral')
   const [dark, setDark] = useState(true)
   const [period, setPeriod] = useState('Últimos 12 meses')
-  const [projectFilter, setProjectFilter] = useState('Todos os projetos')
+  const [projectFilter, setProjectFilter] = useState('')
   const [search, setSearch] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [projects, setProjects] = useState<ApiProject[]>([])
@@ -332,25 +332,25 @@ function App() {
     try { return JSON.parse(localStorage.getItem('gestor_projetos_user') ?? '{}') as { email?: string; role?: string } } catch { return {} }
   }, [])
 
-  const range = useMemo(() => periodRange(period), [period])
+  const filters = useMemo<Filters>(() => ({ ...periodRange(period), projectId: projectFilter || undefined }), [period, projectFilter])
 
   const loadData = useCallback(async () => {
     setLoading(true)
     setError('')
     try {
-      const [projectData, summaryData] = await Promise.all([api.projects(range), api.dashboard(range)])
+      const [projectData, summaryData] = await Promise.all([api.projects(), api.dashboard(filters)])
       setProjects(projectData)
       setSummary(summaryData)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Não foi possível carregar os dados.')
     } finally { setLoading(false) }
-  }, [range])
+  }, [filters])
 
   useEffect(() => { void loadData() }, [loadData])
   useEffect(() => { if (active === 'Visão geral') void loadData() }, [active])
-  useEffect(() => { if (active === 'Visão geral') api.monthly().then(data => { setMonths(data.months); setTrend(data.trend) }).catch(() => {}) }, [active])
+  useEffect(() => { if (active === 'Visão geral') api.monthly(filters).then(data => { setMonths(data.months); setTrend(data.trend) }).catch(() => {}) }, [active, filters])
 
-  const filteredProjects = useMemo(() => projects.filter(project => (projectFilter === 'Todos os projetos' || project.name === projectFilter) && `${project.name} ${project.type} ${project.status}`.toLowerCase().includes(search.toLowerCase())), [projectFilter, projects, search])
+  const filteredProjects = useMemo(() => projects.filter(project => (!projectFilter || project.id === projectFilter) && `${project.name} ${project.type} ${project.status}`.toLowerCase().includes(search.toLowerCase())), [projectFilter, projects, search])
   const attentionProject = projects.find(project => project.revenue > 0 && project.margin < 20)
   const opportunityProject = [...projects].filter(project => project.revenue > 0 && project.margin >= 50).sort((a, b) => b.margin - a.margin)[0]
 
@@ -395,14 +395,14 @@ function App() {
     <main className="main">
       <header className="topbar"><div className="breadcrumbs"><span>Portfólio</span><span className="slash">/</span><b>{active}</b></div><div className="top-actions"><div className="search"><Search size={16} /><input aria-label="Pesquisar" placeholder="Pesquisar projetos e lançamentos" value={search} onChange={event => setSearch(event.target.value)} /><kbd><Command size={12} /> K</kbd></div><button className="icon-btn" onClick={() => setDark(!dark)} aria-label="Alternar tema">{dark ? <Sun size={17} /> : <Sun size={17} />}</button><button className="icon-btn notification" aria-label="Notificações"><Bell size={17} /></button><div className="top-avatar">{(user.email ?? 'AD').slice(0, 2).toUpperCase()}</div></div></header>
       <div className="content">
-        <section className="page-head"><div><h1>{active}</h1><p>Dados carregados do seu workspace.</p></div><div className="head-actions"><div className="select-wrap"><Clock3 size={15} /><select value={period} onChange={event => setPeriod(event.target.value)}><option>Últimos 12 meses</option><option>Este mês</option><option>Este trimestre</option></select><ChevronDown size={14} /></div>{active !== 'Receitas' && active !== 'Despesas' && <button className="primary-btn" onClick={() => setShowModal(true)}><Plus size={16} /> Novo projeto</button>}</div></section>
+        <section className="page-head"><div><h1>{active}</h1><p>Dados carregados do seu workspace.</p></div><div className="head-actions"><div className="mini-select"><select value={projectFilter} onChange={event => setProjectFilter(event.target.value)}><option value="">Todos os projetos</option>{projects.map(project => <option key={project.id} value={project.id}>{project.name}</option>)}</select><ChevronDown size={14} /></div><div className="select-wrap"><Clock3 size={15} /><select value={period} onChange={event => setPeriod(event.target.value)}><option>Últimos 12 meses</option><option>Este mês</option><option>Este trimestre</option></select><ChevronDown size={14} /></div>{active !== 'Receitas' && active !== 'Despesas' && <button className="primary-btn" onClick={() => setShowModal(true)}><Plus size={16} /> Novo projeto</button>}</div></section>
         {error && <div className="login-error">{error}</div>}
-        {active === 'Receitas' ? <FinancePage kind="revenue" projects={projects} search={search} range={range} /> : active === 'Despesas' ? <FinancePage kind="expense" projects={projects} search={search} range={range} /> : active === 'Fluxo de caixa' ? <CashflowPage range={range} /> : active !== 'Visão geral' && active !== 'Projetos' ? <section className="empty-state panel"><div className="empty-icon"><BriefcaseBusiness size={24} /></div><h2>{active}</h2><p>Módulo em desenvolvimento.</p><button className="secondary-btn" onClick={() => setActive('Visão geral')}>Voltar para visão geral</button></section> : <>
+        {active === 'Receitas' ? <FinancePage kind="revenue" projects={projects} search={search} filters={filters} /> : active === 'Despesas' ? <FinancePage kind="expense" projects={projects} search={search} filters={filters} /> : active === 'Fluxo de caixa' ? <CashflowPage filters={filters} /> : active !== 'Visão geral' && active !== 'Projetos' ? <section className="empty-state panel"><div className="empty-icon"><BriefcaseBusiness size={24} /></div><h2>{active}</h2><p>Módulo em desenvolvimento.</p><button className="secondary-btn" onClick={() => setActive('Visão geral')}>Voltar para visão geral</button></section> : <>
           {active === 'Visão geral' && <>
             <div className="kpi-grid"><Kpi label="Projetos" value={String(summary.projects)} icon={FolderKanban} /><Kpi label="Receita total" value={money(summary.revenue)} icon={CircleDollarSign} /><Kpi label="Despesas" value={money(summary.expense)} icon={CreditCard} /><Kpi label="Lucro líquido" value={money(summary.profit)} positive={summary.profit >= 0} icon={BarChart3} /><Kpi label="ROI geral" value={summary.expense > 0 ? `${summary.roi.toFixed(1)}%` : '—'} positive={summary.roi >= 0} icon={Gauge} /></div>
             <div className="dashboard-grid"><section className="panel chart-panel"><div className="panel-head"><div><h2>Receita, despesa e lucro por mês</h2><p>Últimos 12 meses, por competência</p></div>{trend === 'up' ? <span className="trend positive"><ArrowUpRight size={14} /> Lucro em alta</span> : trend === 'down' ? <span className="trend negative"><ArrowDownRight size={14} /> Lucro em queda</span> : <span className="trend"><span style={{ color: 'var(--muted)' }}>Lucro estável</span></span>}</div>{months.length ? <MonthlyChart months={months} /> : <div className="empty-state"><div className="empty-icon"><BarChart3 size={24} /></div><h2>Sem movimentações financeiras</h2><p>Cadastre receitas e despesas para acompanhar a evolução financeira.</p></div>}</section><section className="panel insights-panel"><div className="panel-head"><div><h2>Insights</h2><p>Alertas calculados com os dados reais</p></div><span className="ai-spark"><Sparkles size={15} /></span></div>{attentionProject ? <div className="insight warning"><div className="insight-icon"><ShieldAlert size={17} /></div><div><b>Projeto em atenção</b><p>{attentionProject.name} está com margem de {attentionProject.margin.toFixed(1)}%.</p></div></div> : opportunityProject ? <div className="insight opportunity"><div className="insight-icon"><Lightbulb size={17} /></div><div><b>Boa margem identificada</b><p>{opportunityProject.name} apresenta margem de {opportunityProject.margin.toFixed(1)}%.</p></div></div> : <div className="empty-state"><p>Cadastre movimentações financeiras para gerar insights.</p></div>}</section></div>
           </>}
-          <section className="panel projects-panel"><div className="panel-head"><div><h2>Projetos</h2><p>Registros pertencentes ao usuário autenticado</p></div><div className="table-actions"><div className="mini-select"><select value={projectFilter} onChange={event => setProjectFilter(event.target.value)}><option>Todos os projetos</option>{projects.map(project => <option key={project.name}>{project.name}</option>)}</select><ChevronDown size={14} /></div></div></div><div className="project-table"><div className="table-row table-head"><span>Projeto</span><span>Receita</span><span>Margem</span><span>Despesas</span><span>Status</span><span /></div>{loading ? <div className="empty-state"><p>Carregando dados...</p></div> : filteredProjects.length ? filteredProjects.map(project => <div className="table-row" key={project.id}><div className="project-name"><span className="project-dot" style={{ background: project.color }} /><div><b>{project.name?.trim() || '(sem nome)'}</b><small>{project.type}</small></div></div><span className="table-money">{money(project.revenue)}</span><span className={project.margin < 20 && project.revenue > 0 ? 'margin negative' : 'margin'}>{project.margin.toFixed(1)}%</span><span className="table-money">{money(project.expense)}</span><span className="status"><Check size={12} /> {statusLabels[project.status] ?? project.status}</span><span className="table-actions"><button className="row-more" onClick={() => setEditingProject(project)} aria-label="Alterar projeto" title="Alterar projeto"><Pencil size={15} /></button><button className="row-more" onClick={() => setDeletingProject(project)} aria-label="Excluir projeto" title="Excluir projeto"><Trash2 size={15} /></button></span></div>) : <div className="empty-state"><div className="empty-icon"><FolderKanban size={24} /></div><h2>Nenhum projeto cadastrado</h2><p>Crie seu primeiro projeto para começar a acompanhar os dados reais do portfólio.</p><button className="primary-btn" onClick={() => setShowModal(true)}><Plus size={16} /> Novo projeto</button></div>}</div></section>
+          <section className="panel projects-panel"><div className="panel-head"><div><h2>Projetos</h2><p>Registros pertencentes ao usuário autenticado</p></div></div><div className="project-table"><div className="table-row table-head"><span>Projeto</span><span>Receita</span><span>Margem</span><span>Despesas</span><span>Status</span><span /></div>{loading ? <div className="empty-state"><p>Carregando dados...</p></div> : filteredProjects.length ? filteredProjects.map(project => <div className="table-row" key={project.id}><div className="project-name"><span className="project-dot" style={{ background: project.color }} /><div><b>{project.name?.trim() || '(sem nome)'}</b><small>{project.type}</small></div></div><span className="table-money">{money(project.revenue)}</span><span className={project.margin < 20 && project.revenue > 0 ? 'margin negative' : 'margin'}>{project.margin.toFixed(1)}%</span><span className="table-money">{money(project.expense)}</span><span className="status"><Check size={12} /> {statusLabels[project.status] ?? project.status}</span><span className="table-actions"><button className="row-more" onClick={() => setEditingProject(project)} aria-label="Alterar projeto" title="Alterar projeto"><Pencil size={15} /></button><button className="row-more" onClick={() => setDeletingProject(project)} aria-label="Excluir projeto" title="Excluir projeto"><Trash2 size={15} /></button></span></div>) : <div className="empty-state"><div className="empty-icon"><FolderKanban size={24} /></div><h2>Nenhum projeto cadastrado</h2><p>Crie seu primeiro projeto para começar a acompanhar os dados reais do portfólio.</p><button className="primary-btn" onClick={() => setShowModal(true)}><Plus size={16} /> Novo projeto</button></div>}</div></section>
         </>}
       </div>
     </main>

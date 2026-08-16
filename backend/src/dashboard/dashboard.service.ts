@@ -4,24 +4,24 @@ import { PrismaService } from '../prisma.service'
 @Injectable()
 export class DashboardService {
   constructor(private readonly prisma: PrismaService) {}
-  async summary(ownerId: string, from?: string, to?: string) {
+  async summary(ownerId: string, from?: string, to?: string, projectId?: string) {
     const competence = this.competenceRange(from, to)
     const [projects, revenues, expenses] = await Promise.all([
-      this.prisma.project.count({ where: { ownerId } }),
-      this.prisma.revenue.aggregate({ where: { project: { ownerId }, ...(competence ? { competence } : {}) }, _sum: { amount: true } }),
-      this.prisma.expense.aggregate({ where: { project: { ownerId }, ...(competence ? { competence } : {}) }, _sum: { amount: true } }),
+      this.prisma.project.count({ where: { ownerId, ...(projectId ? { id: projectId } : {}) } }),
+      this.prisma.revenue.aggregate({ where: { project: { ownerId }, ...(projectId ? { projectId } : {}), ...(competence ? { competence } : {}) }, _sum: { amount: true } }),
+      this.prisma.expense.aggregate({ where: { project: { ownerId }, ...(projectId ? { projectId } : {}), ...(competence ? { competence } : {}) }, _sum: { amount: true } }),
     ])
     const revenue = Number(revenues._sum.amount ?? 0)
     const expense = Number(expenses._sum.amount ?? 0)
     return { projects, revenue, expense, profit: revenue - expense, roi: expense ? ((revenue - expense) / expense) * 100 : 0 }
   }
-  async cashflow(ownerId: string, from?: string, to?: string) {
+  async cashflow(ownerId: string, from?: string, to?: string, projectId?: string) {
     const range = this.competenceRange(from, to)
     const [revenues, expenses, pendingRevenue, pendingExpense] = await Promise.all([
-      this.prisma.revenue.findMany({ where: { project: { ownerId }, receivedAt: { not: null, ...(range ?? {}) } }, select: { amount: true, receivedAt: true, category: true, project: { select: { name: true } } } }),
-      this.prisma.expense.findMany({ where: { project: { ownerId }, dueDate: { not: null, ...(range ?? {}) } }, select: { amount: true, dueDate: true, category: true, project: { select: { name: true } } } }),
-      this.prisma.revenue.aggregate({ where: { project: { ownerId }, receivedAt: null }, _sum: { amount: true } }),
-      this.prisma.expense.aggregate({ where: { project: { ownerId }, dueDate: null }, _sum: { amount: true } }),
+      this.prisma.revenue.findMany({ where: { project: { ownerId }, ...(projectId ? { projectId } : {}), receivedAt: { not: null, ...(range ?? {}) } }, select: { amount: true, receivedAt: true, category: true, project: { select: { name: true } } } }),
+      this.prisma.expense.findMany({ where: { project: { ownerId }, ...(projectId ? { projectId } : {}), dueDate: { not: null, ...(range ?? {}) } }, select: { amount: true, dueDate: true, category: true, project: { select: { name: true } } } }),
+      this.prisma.revenue.aggregate({ where: { project: { ownerId }, ...(projectId ? { projectId } : {}), receivedAt: null }, _sum: { amount: true } }),
+      this.prisma.expense.aggregate({ where: { project: { ownerId }, ...(projectId ? { projectId } : {}), dueDate: null }, _sum: { amount: true } }),
     ])
 
     const movements = [
@@ -54,15 +54,15 @@ export class DashboardService {
     }
   }
 
-  async monthly(ownerId: string) {
+  async monthly(ownerId: string, projectId?: string) {
     const from = new Date()
     from.setUTCDate(1)
     from.setUTCHours(0, 0, 0, 0)
     from.setUTCMonth(from.getUTCMonth() - 11)
 
     const [revenues, expenses] = await Promise.all([
-      this.prisma.revenue.findMany({ where: { project: { ownerId }, competence: { gte: from } }, select: { amount: true, competence: true } }),
-      this.prisma.expense.findMany({ where: { project: { ownerId }, competence: { gte: from } }, select: { amount: true, competence: true } }),
+      this.prisma.revenue.findMany({ where: { project: { ownerId }, ...(projectId ? { projectId } : {}), competence: { gte: from } }, select: { amount: true, competence: true } }),
+      this.prisma.expense.findMany({ where: { project: { ownerId }, ...(projectId ? { projectId } : {}), competence: { gte: from } }, select: { amount: true, competence: true } }),
     ])
 
     const buckets = new Map<string, { revenue: number; expense: number }>()

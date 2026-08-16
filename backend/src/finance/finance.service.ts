@@ -7,15 +7,15 @@ type FinanceInput = { projectId: string; category: string; description?: string;
 export class FinanceService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async revenues(ownerId: string, from?: string, to?: string) {
+  async revenues(ownerId: string, from?: string, to?: string, projectId?: string) {
     const competence = this.competenceRange(from, to)
-    const rows = await this.prisma.revenue.findMany({ where: { project: { ownerId }, ...(competence ? { competence } : {}) }, include: { project: { select: { id: true, name: true } } }, orderBy: { competence: 'desc' } })
+    const rows = await this.prisma.revenue.findMany({ where: { project: { ownerId }, ...(projectId ? { projectId } : {}), ...(competence ? { competence } : {}) }, include: { project: { select: { id: true, name: true } } }, orderBy: { competence: 'desc' } })
     return rows.map(row => ({ ...row, amount: Number(row.amount) }))
   }
 
-  async expenses(ownerId: string, from?: string, to?: string) {
+  async expenses(ownerId: string, from?: string, to?: string, projectId?: string) {
     const competence = this.competenceRange(from, to)
-    const rows = await this.prisma.expense.findMany({ where: { project: { ownerId }, ...(competence ? { competence } : {}) }, include: { project: { select: { id: true, name: true } } }, orderBy: { competence: 'desc' } })
+    const rows = await this.prisma.expense.findMany({ where: { project: { ownerId }, ...(projectId ? { projectId } : {}), ...(competence ? { competence } : {}) }, include: { project: { select: { id: true, name: true } } }, orderBy: { competence: 'desc' } })
     return rows.map(row => ({ ...row, amount: Number(row.amount) }))
   }
 
