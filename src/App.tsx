@@ -147,8 +147,9 @@ function FinancePage({ kind, projects, search, filters }: { kind: 'revenue' | 'e
   const [editing, setEditing] = useState<ApiFinanceEntry | null>(null)
   const [deleting, setDeleting] = useState<ApiFinanceEntry | null>(null)
   const [error, setError] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState('')
   const label = kind === 'revenue' ? 'receita' : 'despesa'
-  const visibleEntries = entries.filter(entry => `${entry.project.name} ${entry.category} ${entry.description ?? ''}`.toLowerCase().includes(search.toLowerCase()))
+  const visibleEntries = entries.filter(entry => (!categoryFilter || entry.category === categoryFilter) && `${entry.project.name} ${entry.category} ${entry.description ?? ''}`.toLowerCase().includes(search.toLowerCase()))
   const lastCategoryKey = `gestor_projetos_last_category_${kind}`
   const emptyForm: FinanceFormData = { projectId: '', category: localStorage.getItem(lastCategoryKey) ?? '', description: '', amount: '', competence: todayLocal(), settlementDate: '' }
 
@@ -197,7 +198,7 @@ function FinancePage({ kind, projects, search, filters }: { kind: 'revenue' | 'e
   }
 
   return <section className="panel projects-panel finance-page">
-    <div className="panel-head"><div><h2>{kind === 'revenue' ? 'Receitas registradas' : 'Despesas registradas'}</h2><p>A competência define em que mês o valor entra no resultado.</p></div><button className="primary-btn" onClick={() => setShowForm(true)} disabled={!projects.length}><Plus size={16} /> Nova {label}</button></div>
+    <div className="panel-head"><div><h2>{kind === 'revenue' ? 'Receitas registradas' : 'Despesas registradas'}</h2><p>A competência define em que mês o valor entra no resultado.</p></div><div className="table-actions">{categories.length > 0 && <div className="mini-select"><select value={categoryFilter} onChange={event => setCategoryFilter(event.target.value)} aria-label="Filtrar por plano de contas"><option value="">Todas as categorias</option>{categories.map(category => <option key={category} value={category}>{category}</option>)}</select><ChevronDown size={14} /></div>}<button className="primary-btn" onClick={() => setShowForm(true)} disabled={!projects.length}><Plus size={16} /> Nova {label}</button></div></div>
     {error && <div className="login-error">{error}</div>}
     {!projects.length ? <div className="empty-state"><h2>Cadastre um projeto primeiro</h2><p>Uma {label} precisa estar vinculada a um projeto.</p></div>
       : loading ? <div className="empty-state"><p>Carregando lançamentos...</p></div>
