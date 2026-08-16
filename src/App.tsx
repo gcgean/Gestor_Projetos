@@ -245,6 +245,7 @@ function App() {
   }, [range])
 
   useEffect(() => { void loadData() }, [loadData])
+  useEffect(() => { if (active === 'Visão geral') void loadData() }, [active])
 
   const filteredProjects = useMemo(() => projects.filter(project => (projectFilter === 'Todos os projetos' || project.name === projectFilter) && `${project.name} ${project.type} ${project.status}`.toLowerCase().includes(search.toLowerCase())), [projectFilter, projects, search])
   const attentionProject = projects.find(project => project.revenue > 0 && project.margin < 20)
