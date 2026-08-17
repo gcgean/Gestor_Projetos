@@ -23,6 +23,9 @@ export type CashflowData = { totalIn: number; totalOut: number; balance: number;
 export type MonthlySummary = { month: string; revenue: number; expense: number; profit: number }
 export type MonthlyData = { months: MonthlySummary[]; trend: 'up' | 'down' | 'flat' }
 
+export type ProjectMonthlySeries = { id: string; name: string; color: string; months: { month: string; profit: number }[] }
+export type MonthlyByProjectData = { months: string[]; series: ProjectMonthlySeries[] }
+
 function query(filters?: Filters) {
   if (!filters) return ''
   const params = new URLSearchParams()
@@ -57,6 +60,7 @@ export const api = {
   dashboard: (filters?: Filters) => request<{ projects: number; revenue: number; expense: number; profit: number; roi: number }>(`/dashboard/summary${query(filters)}`),
   cashflow: (filters?: Filters) => request<CashflowData>(`/dashboard/cashflow${query(filters)}`),
   monthly: (filters?: Filters) => request<MonthlyData>(`/dashboard/monthly${query(filters)}`),
+  monthlyByProject: (filters?: Filters) => request<MonthlyByProjectData>(`/dashboard/monthly-by-project${query(filters)}`),
   categories: (kind?: 'revenue' | 'expense') => request<string[]>(`/finance/categories${kind ? `?kind=${kind}` : ''}`),
   revenues: (filters?: Filters) => request<ApiFinanceEntry[]>(`/finance/revenues${query(filters)}`),
   expenses: (filters?: Filters) => request<ApiFinanceEntry[]>(`/finance/expenses${query(filters)}`),

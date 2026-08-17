@@ -86,6 +86,41 @@ export class DashboardService {
     return { months, trend: this.trendDirection(months.map(month => month.profit)) }
   }
 
+  async monthlyByProject(ownerId: string, projectId?: string, category?: string) {
+    const from = new Date()
+    from.setUTCDate(1)
+    from.setUTCHours(0, 0, 0, 0)
+    from.setUTCMonth(from.getUTCMonth() - 11)
+
+    const monthKeys: string[] = []
+    const cursor = new Date(from)
+    for (let i = 0; i < 12; i++) {
+      monthKeys.push(`${cursor.getUTCFullYear()}-${String(cursor.getUTCMonth() + 1).padStart(2, '0')}`)
+      cursor.setUTCMonth(cursor.getUTCMonth() + 1)
+    }
+
+    const projects = await this.prisma.project.findMany({ where: { ownerId, ...(projectId ? { id: projectId } : {}) }, select: { id: true, name: true, color: true }, orderBy: { updatedAt: 'desc' } })
+
+    const series = await Promise.all(projects.map(async project => {
+      const [revenues, expenses] = await Promise.all([
+        this.prisma.revenue.findMany({ where: { projectId: project.id, ...(category ? { category } : {}), competence: { gte: from } }, select: { amount: true, competence: true } }),
+        this.prisma.expense.findMany({ where: { projectId: project.id, ...(category ? { category } : {}), competence: { gte: from } }, select: { amount: true, competence: true } }),
+      ])
+      const buckets = new Map<string, number>(monthKeys.map(key => [key, 0]))
+      for (const row of revenues) {
+        const key = `${row.competence.getUTCFullYear()}-${String(row.competence.getUTCMonth() + 1).padStart(2, '0')}`
+        if (buckets.has(key)) buckets.set(key, buckets.get(key)! + Number(row.amount))
+      }
+      for (const row of expenses) {
+        const key = `${row.competence.getUTCFullYear()}-${String(row.competence.getUTCMonth() + 1).padStart(2, '0')}`
+        if (buckets.has(key)) buckets.set(key, buckets.get(key)! - Number(row.amount))
+      }
+      return { id: project.id, name: project.name, color: project.color, months: monthKeys.map(month => ({ month, profit: buckets.get(month) ?? 0 })) }
+    }))
+
+    return { months: monthKeys, series }
+  }
+
   private trendDirection(values: number[]): 'up' | 'down' | 'flat' {
     if (values.length < 2) return 'flat'
     const xMean = (values.length - 1) / 2
