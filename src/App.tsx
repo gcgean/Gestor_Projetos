@@ -52,6 +52,10 @@ function formatDate(value?: string | null) {
 
 const monthNames = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
 
+// Paleta fixa por projeto: os projetos costumam compartilhar a mesma cor padrão (#7c6cff),
+// então gráficos com uma cor por projeto (pizza, linhas) usam esta paleta em vez de project.color.
+const projectPalette = ['#7c6cff', '#57d39b', '#f4b860', '#f17878', '#5cc8f2', '#f279c0', '#a3e635', '#fb923c']
+
 function formatMonth(monthKey: string) {
   const [year, month] = monthKey.split('-')
   return `${monthNames[Number(month) - 1]}/${year}`
@@ -373,7 +377,7 @@ function arcPath(cx: number, cy: number, r: number, startAngle: number, endAngle
   return `M ${cx} ${cy} L ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} 0 ${end.x} ${end.y} Z`
 }
 
-function ProjectShareChart({ projects }: { projects: ApiProject[] }) {
+function ProjectShareChart({ projects, colorByProjectId }: { projects: ApiProject[]; colorByProjectId: Record<string, string> }) {
   const withProfit = projects.map(project => ({ ...project, profit: project.revenue - project.expense }))
   const positive = withProfit.filter(project => project.profit > 0).sort((a, b) => b.profit - a.profit)
   const totalPositive = positive.reduce((sum, project) => sum + project.profit, 0)
@@ -390,7 +394,7 @@ function ProjectShareChart({ projects }: { projects: ApiProject[] }) {
     const share = project.profit / totalPositive
     const startAngle = angle
     angle += share * 360
-    return { ...project, share, startAngle, endAngle: angle }
+    return { ...project, color: colorByProjectId[project.id] ?? project.color, share, startAngle, endAngle: angle }
   })
 
   return <section className="panel projects-panel">
@@ -407,7 +411,7 @@ function ProjectShareChart({ projects }: { projects: ApiProject[] }) {
   </section>
 }
 
-function ProjectTrendChart({ months, series }: { months: string[]; series: ProjectMonthlySeries[] }) {
+function ProjectTrendChart({ months, series, colorByProjectId }: { months: string[]; series: ProjectMonthlySeries[]; colorByProjectId: Record<string, string> }) {
   const width = 700
   const height = 180
   const groupWidth = width / months.length
@@ -420,14 +424,15 @@ function ProjectTrendChart({ months, series }: { months: string[]; series: Proje
 
   return <section className="panel projects-panel">
     <div className="panel-head"><div><h2>Lucro por projeto, mês a mês</h2><p>Últimos 12 meses — cada linha é um projeto, para ver se está subindo ou caindo</p></div></div>
-    <div className="chart-legend">{series.map(project => <span key={project.id}><span className="legend-dot" style={{ background: project.color }} />{project.name}</span>)}</div>
+    <div className="chart-legend">{series.map(project => <span key={project.id}><span className="legend-dot" style={{ background: colorByProjectId[project.id] ?? project.color }} />{project.name}</span>)}</div>
     <svg className="chart" viewBox={`0 0 ${width} ${height + 20}`} preserveAspectRatio="none">
       <line x1={0} y1={baseline} x2={width} y2={baseline} className="grid-line" />
       {series.map(project => {
+        const color = colorByProjectId[project.id] ?? project.color
         const points = project.months.map((month, index) => `${index * groupWidth + groupWidth / 2},${scaleY(month.profit)}`).join(' ')
         return <g key={project.id}>
-          <polyline points={points} fill="none" stroke={project.color} strokeWidth={2} />
-          {project.months.map((month, index) => <circle key={month.month} cx={index * groupWidth + groupWidth / 2} cy={scaleY(month.profit)} r={2.5} fill={project.color}><title>{`${project.name} · ${formatMonth(month.month)}: ${money(month.profit)}`}</title></circle>)}
+          <polyline points={points} fill="none" stroke={color} strokeWidth={2} />
+          {project.months.map((month, index) => <circle key={month.month} cx={index * groupWidth + groupWidth / 2} cy={scaleY(month.profit)} r={2.5} fill={color}><title>{`${project.name} · ${formatMonth(month.month)}: ${money(month.profit)}`}</title></circle>)}
         </g>
       })}
       {months.map((month, index) => (index % 2 === 0 || months.length <= 6) && <text key={`${month}-project-trend-label`} x={index * groupWidth + groupWidth / 2} y={height + 14} textAnchor="middle" fontSize={9} fill="var(--muted-2)">{formatMonth(month)}</text>)}
@@ -486,6 +491,7 @@ function App() {
   useEffect(() => { if (active === 'Visão geral') api.monthlyByProject(filters).then(setProjectTrend).catch(() => {}) }, [active, filters])
 
   const filteredProjects = useMemo(() => projects.filter(project => (!projectFilter || project.id === projectFilter) && `${project.name} ${project.type} ${project.status}`.toLowerCase().includes(search.toLowerCase())).sort((a, b) => (b.revenue - b.expense) - (a.revenue - a.expense)), [projectFilter, projects, search])
+  const colorByProjectId = useMemo(() => Object.fromEntries(projects.map((project, index) => [project.id, projectPalette[index % projectPalette.length]])), [projects])
   const attentionProject = projects.find(project => project.revenue > 0 && project.margin < 20)
   const opportunityProject = [...projects].filter(project => project.revenue > 0 && project.margin >= 50).sort((a, b) => b.margin - a.margin)[0]
 
@@ -537,8 +543,8 @@ function App() {
             <div className="kpi-grid"><Kpi label="Projetos" value={String(summary.projects)} icon={FolderKanban} /><Kpi label="Receita total" value={money(summary.revenue)} icon={CircleDollarSign} /><Kpi label="Despesas" value={money(summary.expense)} icon={CreditCard} /><Kpi label="Lucro líquido" value={money(summary.profit)} positive={summary.profit >= 0} icon={BarChart3} /><Kpi label="ROI geral" value={summary.expense > 0 ? `${summary.roi.toFixed(1)}%` : '—'} positive={summary.roi >= 0} icon={Gauge} /></div>
             <div className="dashboard-grid"><section className="panel chart-panel"><div className="panel-head"><div><h2>Receita, despesa e lucro por mês</h2><p>Últimos 12 meses, por competência</p></div>{trend === 'up' ? <span className="trend positive"><ArrowUpRight size={14} /> Lucro em alta</span> : trend === 'down' ? <span className="trend negative"><ArrowDownRight size={14} /> Lucro em queda</span> : <span className="trend"><span style={{ color: 'var(--muted)' }}>Lucro estável</span></span>}</div>{months.length ? <MonthlyChart months={months} /> : <div className="empty-state"><div className="empty-icon"><BarChart3 size={24} /></div><h2>Sem movimentações financeiras</h2><p>Cadastre receitas e despesas para acompanhar a evolução financeira.</p></div>}</section><section className="panel insights-panel"><div className="panel-head"><div><h2>Insights</h2><p>Alertas calculados com os dados reais</p></div><span className="ai-spark"><Sparkles size={15} /></span></div>{attentionProject ? <div className="insight warning"><div className="insight-icon"><ShieldAlert size={17} /></div><div><b>Projeto em atenção</b><p>{attentionProject.name} está com margem de {attentionProject.margin.toFixed(1)}%.</p></div></div> : opportunityProject ? <div className="insight opportunity"><div className="insight-icon"><Lightbulb size={17} /></div><div><b>Boa margem identificada</b><p>{opportunityProject.name} apresenta margem de {opportunityProject.margin.toFixed(1)}%.</p></div></div> : <div className="empty-state"><p>Cadastre movimentações financeiras para gerar insights.</p></div>}</section></div>
             {months.length > 0 && <ProfitabilityPanel months={months} />}
-            {projects.length > 0 && <ProjectShareChart projects={projects} />}
-            {projectTrend.series.length > 0 && <ProjectTrendChart months={projectTrend.months} series={projectTrend.series} />}
+            {projects.length > 0 && <ProjectShareChart projects={projects} colorByProjectId={colorByProjectId} />}
+            {projectTrend.series.length > 0 && <ProjectTrendChart months={projectTrend.months} series={projectTrend.series} colorByProjectId={colorByProjectId} />}
           </>}
           <section className="panel projects-panel"><div className="panel-head"><div><h2>Projetos</h2><p>Registros pertencentes ao usuário autenticado</p></div></div><div className="project-table"><div className="table-row table-head"><span>Projeto</span><span>Receita</span><span>Margem</span><span>Despesas</span><span>Status</span><span /></div>{loading ? <div className="empty-state"><p>Carregando dados...</p></div> : filteredProjects.length ? filteredProjects.map(project => <div className="table-row" key={project.id}><div className="project-name"><span className="project-dot" style={{ background: project.color }} /><div><b>{project.name?.trim() || '(sem nome)'}</b><small>{project.type}</small></div></div><span className="table-money">{money(project.revenue)}</span><span className={project.revenue - project.expense < 0 ? 'margin negative' : 'margin'}><b>{money(project.revenue - project.expense)}</b><small>{project.margin.toFixed(1)}%</small></span><span className="table-money">{money(project.expense)}</span><span className="status"><Check size={12} /> {statusLabels[project.status] ?? project.status}</span><span className="table-actions"><button className="row-more" onClick={() => setEditingProject(project)} aria-label="Alterar projeto" title="Alterar projeto"><Pencil size={15} /></button><button className="row-more" onClick={() => setDeletingProject(project)} aria-label="Excluir projeto" title="Excluir projeto"><Trash2 size={15} /></button></span></div>) : <div className="empty-state"><div className="empty-icon"><FolderKanban size={24} /></div><h2>Nenhum projeto cadastrado</h2><p>Crie seu primeiro projeto para começar a acompanhar os dados reais do portfólio.</p><button className="primary-btn" onClick={() => setShowModal(true)}><Plus size={16} /> Novo projeto</button></div>}</div></section>
         </>}
