@@ -5,7 +5,7 @@ import { TelegramService } from '../telegram/telegram.service'
 const CHECK_INTERVAL_MS = 5 * 60 * 1000
 const REQUEST_TIMEOUT_MS = 10000
 
-type MonitoredProject = { id: string; name: string; url: string | null; isOnline: boolean | null }
+type MonitoredProject = { id: string; name: string; url: string | null; isOnline: boolean | null; owner: { telegramBotToken: string | null; telegramChatId: string | null } }
 
 @Injectable()
 export class MonitorService implements OnModuleInit {
@@ -19,7 +19,10 @@ export class MonitorService implements OnModuleInit {
   }
 
   private async checkAll() {
-    const projects = await this.prisma.project.findMany({ where: { url: { not: null } }, select: { id: true, name: true, url: true, isOnline: true } })
+    const projects = await this.prisma.project.findMany({
+      where: { url: { not: null } },
+      select: { id: true, name: true, url: true, isOnline: true, owner: { select: { telegramBotToken: true, telegramChatId: true } } },
+    })
     for (const project of projects) await this.checkProject(project)
   }
 
@@ -30,10 +33,11 @@ export class MonitorService implements OnModuleInit {
 
     await this.prisma.project.update({ where: { id: project.id }, data: { isOnline: online, lastCheckedAt: new Date() } })
 
+    const credentials = { botToken: project.owner.telegramBotToken, chatId: project.owner.telegramChatId }
     if (wasOnline !== false && !online) {
-      await this.telegram.sendMessage(`⚠️ O projeto "${project.name}" parece estar fora do ar.\n${project.url}`)
+      await this.telegram.sendMessage(`⚠️ O projeto "${project.name}" parece estar fora do ar.\n${project.url}`, credentials)
     } else if (wasOnline === false && online) {
-      await this.telegram.sendMessage(`✅ O projeto "${project.name}" voltou ao ar.\n${project.url}`)
+      await this.telegram.sendMessage(`✅ O projeto "${project.name}" voltou ao ar.\n${project.url}`, credentials)
     }
   }
 

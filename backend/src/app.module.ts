@@ -11,10 +11,12 @@ import { FinanceController } from './finance/finance.controller'
 import { FinanceService } from './finance/finance.service'
 import { TelegramService } from './telegram/telegram.service'
 import { MonitorService } from './monitor/monitor.service'
+import { SettingsController } from './settings/settings.controller'
+import { SettingsService } from './settings/settings.service'
 
 @Module({
   imports: [JwtModule.register({ secret: process.env.JWT_SECRET ?? 'dev-secret', signOptions: { expiresIn: '7d' } })],
-  controllers: [AuthController, ProjectsController, DashboardController, FinanceController],
-  providers: [PrismaService, AuthService, ProjectsService, DashboardService, FinanceService, TelegramService, MonitorService],
+  controllers: [AuthController, ProjectsController, DashboardController, FinanceController, SettingsController],
+  providers: [PrismaService, AuthService, ProjectsService, DashboardService, FinanceService, TelegramService, MonitorService, SettingsService],
 })
 export class AppModule {}

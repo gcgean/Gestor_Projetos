@@ -29,6 +29,8 @@ export type MonthlyData = { months: MonthlySummary[]; trend: 'up' | 'down' | 'fl
 export type ProjectMonthlySeries = { id: string; name: string; color: string; months: { month: string; profit: number }[] }
 export type MonthlyByProjectData = { months: string[]; series: ProjectMonthlySeries[] }
 
+export type TelegramSettings = { hasToken: boolean; chatId: string }
+
 function query(filters?: Filters) {
   if (!filters) return ''
   const params = new URLSearchParams()
@@ -75,4 +77,7 @@ export const api = {
   deleteProject: (id: string) => request<{ deleted: boolean }>(`/projects/${id}`, { method: 'DELETE' }),
   updateRevenue: (id: string, data: Record<string, unknown>) => request<{ updated: boolean }>(`/finance/revenues/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   updateExpense: (id: string, data: Record<string, unknown>) => request<{ updated: boolean }>(`/finance/expenses/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  getTelegramSettings: () => request<TelegramSettings>('/settings/telegram'),
+  updateTelegramSettings: (data: { botToken?: string; chatId?: string }) => request<TelegramSettings>('/settings/telegram', { method: 'PUT', body: JSON.stringify(data) }),
+  testTelegram: () => request<{ ok: boolean; error?: string }>('/settings/telegram/test', { method: 'POST' }),
 }

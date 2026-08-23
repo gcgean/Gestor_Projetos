@@ -4,12 +4,13 @@ import { Injectable, Logger } from '@nestjs/common'
 export class TelegramService {
   private readonly logger = new Logger(TelegramService.name)
 
-  async sendMessage(text: string) {
-    const token = process.env.TELEGRAM_BOT_TOKEN
-    const chatId = process.env.TELEGRAM_CHAT_ID
+  async sendMessage(text: string, credentials?: { botToken?: string | null; chatId?: string | null }): Promise<{ ok: boolean; error?: string }> {
+    const token = credentials?.botToken || process.env.TELEGRAM_BOT_TOKEN
+    const chatId = credentials?.chatId || process.env.TELEGRAM_CHAT_ID
     if (!token || !chatId) {
-      this.logger.warn(`TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID não configurados — alerta não enviado: ${text}`)
-      return
+      const message = 'Bot do Telegram não configurado.'
+      this.logger.warn(`${message} Alerta não enviado: ${text}`)
+      return { ok: false, error: message }
     }
     try {
       const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
@@ -17,9 +18,16 @@ export class TelegramService {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ chat_id: chatId, text }),
       })
-      if (!response.ok) this.logger.error(`Falha ao enviar mensagem ao Telegram: ${response.status} ${await response.text()}`)
+      if (!response.ok) {
+        const body = await response.text()
+        this.logger.error(`Falha ao enviar mensagem ao Telegram: ${response.status} ${body}`)
+        return { ok: false, error: `Telegram respondeu ${response.status}: ${body}` }
+      }
+      return { ok: true }
     } catch (err) {
-      this.logger.error(`Erro ao enviar mensagem ao Telegram: ${err instanceof Error ? err.message : String(err)}`)
+      const message = err instanceof Error ? err.message : String(err)
+      this.logger.error(`Erro ao enviar mensagem ao Telegram: ${message}`)
+      return { ok: false, error: message }
     }
   }
 }

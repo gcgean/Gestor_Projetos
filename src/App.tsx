@@ -441,6 +441,68 @@ function ProjectTrendChart({ months, series, colorByProjectId }: { months: strin
   </section>
 }
 
+function SettingsPage() {
+  const [settings, setSettings] = useState<{ hasToken: boolean; chatId: string } | null>(null)
+  const [botToken, setBotToken] = useState('')
+  const [chatId, setChatId] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [testing, setTesting] = useState(false)
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    api.getTelegramSettings().then(data => { setSettings(data); setChatId(data.chatId) }).catch(err => setError(err instanceof Error ? err.message : 'Não foi possível carregar as configurações.'))
+  }, [])
+
+  async function save(event: FormEvent) {
+    event.preventDefault()
+    setSaving(true)
+    setError('')
+    setMessage('')
+    try {
+      const data = await api.updateTelegramSettings({ ...(botToken ? { botToken } : {}), chatId })
+      setSettings(data)
+      setBotToken('')
+      setMessage('Configurações salvas.')
+    } catch (err) { setError(err instanceof Error ? err.message : 'Não foi possível salvar.') } finally { setSaving(false) }
+  }
+
+  async function test() {
+    setTesting(true)
+    setError('')
+    setMessage('')
+    try {
+      const result = await api.testTelegram()
+      if (result.ok) setMessage('Mensagem de teste enviada! Confira seu Telegram.')
+      else setError(result.error || 'Não foi possível enviar a mensagem de teste.')
+    } catch (err) { setError(err instanceof Error ? err.message : 'Não foi possível testar.') } finally { setTesting(false) }
+  }
+
+  return <section className="panel projects-panel settings-panel">
+    <div className="panel-head"><div><h2>Telegram</h2><p>Receba um alerta quando algum projeto com URL cadastrada sair do ar</p></div></div>
+    {error && <div className="login-error">{error}</div>}
+    {message && <div className="login-success">{message}</div>}
+    <form onSubmit={save}>
+      <label>Token do bot{settings?.hasToken ? ' (já configurado)' : ''}<input type="password" value={botToken} onChange={event => setBotToken(event.target.value)} placeholder={settings?.hasToken ? 'Deixe em branco para manter o atual' : 'Cole aqui o token do @BotFather'} /></label>
+      <label>Chat ID<input value={chatId} onChange={event => setChatId(event.target.value)} placeholder="Seu chat ID numérico" /></label>
+      <div className="settings-actions">
+        <button className="primary-btn" disabled={saving}>{saving ? 'Salvando...' : 'Salvar'}</button>
+        <button type="button" className="secondary-btn" onClick={test} disabled={testing || !settings?.hasToken}>{testing ? 'Enviando...' : 'Enviar mensagem de teste'}</button>
+      </div>
+    </form>
+    <div className="settings-help">
+      <h3>Como configurar</h3>
+      <ol>
+        <li>No Telegram, fale com <b>@BotFather</b>, mande <code>/newbot</code> e siga as instruções.</li>
+        <li>Copie o token que ele te der e cole no campo acima.</li>
+        <li>Procure pelo seu bot no Telegram e mande uma mensagem qualquer para ele (precisa iniciar a conversa primeiro).</li>
+        <li>Acesse <code>https://api.telegram.org/bot&lt;SEU_TOKEN&gt;/getUpdates</code> no navegador e copie o número em <code>"chat":{'{'}"id":...{'}'}</code>.</li>
+        <li>Cole esse número no campo Chat ID acima, clique em Salvar e depois em "Enviar mensagem de teste".</li>
+      </ol>
+    </div>
+  </section>
+}
+
 function App() {
   const [active, setActive] = useState('Visão geral')
   const [dark, setDark] = useState(true)
@@ -532,14 +594,14 @@ function App() {
       <div className="brand"><div className="brand-mark"><BarChart3 size={17} /></div><span>Gestor_<strong>Projetos</strong></span></div>
       <div className="workspace-switch"><div className="workspace-avatar">GP</div><div><b>Meu portfólio</b><span>Workspace principal</span></div><ChevronDown size={14} /></div>
       <nav className="nav">{nav.map(({ label, icon: Icon }) => <button key={label} onClick={() => setActive(label)} className={active === label ? 'nav-item active' : 'nav-item'}><Icon size={17} /><span>{label}</span></button>)}</nav>
-      <div className="sidebar-bottom"><button className="nav-item"><Settings2 size={17} /><span>Configurações</span></button><button className="nav-item"><HelpCircle size={17} /><span>Ajuda e suporte</span></button><div className="user-card"><div className="user-avatar">{(user.email ?? 'AD').slice(0, 2).toUpperCase()}</div><div><b>{user.email ?? 'Usuário'}</b><span>{user.role ?? 'Usuário'}</span></div><MoreHorizontal size={16} /></div></div>
+      <div className="sidebar-bottom"><button className="nav-item" onClick={() => setActive('Configurações')}><Settings2 size={17} /><span>Configurações</span></button><button className="nav-item"><HelpCircle size={17} /><span>Ajuda e suporte</span></button><div className="user-card"><div className="user-avatar">{(user.email ?? 'AD').slice(0, 2).toUpperCase()}</div><div><b>{user.email ?? 'Usuário'}</b><span>{user.role ?? 'Usuário'}</span></div><MoreHorizontal size={16} /></div></div>
     </aside>
     <main className="main">
       <header className="topbar"><div className="breadcrumbs"><span>Portfólio</span><span className="slash">/</span><b>{active}</b></div><div className="top-actions"><div className="search"><Search size={16} /><input aria-label="Pesquisar" placeholder="Pesquisar projetos e lançamentos" value={search} onChange={event => setSearch(event.target.value)} /><kbd><Command size={12} /> K</kbd></div><button className="icon-btn" onClick={() => setDark(!dark)} aria-label="Alternar tema">{dark ? <Sun size={17} /> : <Sun size={17} />}</button><button className="icon-btn notification" aria-label="Notificações"><Bell size={17} /></button><div className="top-avatar">{(user.email ?? 'AD').slice(0, 2).toUpperCase()}</div></div></header>
       <div className="content">
-        <section className="page-head"><div><h1>{active}</h1><p>Dados carregados do seu workspace.</p></div><div className="head-actions"><div className="mini-select"><select value={projectFilter} onChange={event => setProjectFilter(event.target.value)}><option value="">Todos os projetos</option>{projects.map(project => <option key={project.id} value={project.id}>{project.name}</option>)}</select><ChevronDown size={14} /></div>{allCategories.length > 0 && <div className="mini-select"><select value={categoryFilter} onChange={event => setCategoryFilter(event.target.value)} aria-label="Filtrar por plano de contas"><option value="">Todas as categorias</option>{allCategories.map(category => <option key={category} value={category}>{category}</option>)}</select><ChevronDown size={14} /></div>}<div className="select-wrap"><Clock3 size={15} /><select value={period} onChange={event => setPeriod(event.target.value)}><option>Últimos 12 meses</option><option>Este mês</option><option>Este trimestre</option><option>Personalizado</option></select><ChevronDown size={14} /></div>{period === 'Personalizado' && <><input type="date" value={customFrom} onChange={event => setCustomFrom(event.target.value)} className="custom-date" aria-label="Data inicial" /><input type="date" value={customTo} onChange={event => setCustomTo(event.target.value)} className="custom-date" aria-label="Data final" /></>}{active !== 'Receitas' && active !== 'Despesas' && <button className="primary-btn" onClick={() => setShowModal(true)}><Plus size={16} /> Novo projeto</button>}</div></section>
+        <section className="page-head"><div><h1>{active}</h1><p>Dados carregados do seu workspace.</p></div>{active !== 'Configurações' && <div className="head-actions"><div className="mini-select"><select value={projectFilter} onChange={event => setProjectFilter(event.target.value)}><option value="">Todos os projetos</option>{projects.map(project => <option key={project.id} value={project.id}>{project.name}</option>)}</select><ChevronDown size={14} /></div>{allCategories.length > 0 && <div className="mini-select"><select value={categoryFilter} onChange={event => setCategoryFilter(event.target.value)} aria-label="Filtrar por plano de contas"><option value="">Todas as categorias</option>{allCategories.map(category => <option key={category} value={category}>{category}</option>)}</select><ChevronDown size={14} /></div>}<div className="select-wrap"><Clock3 size={15} /><select value={period} onChange={event => setPeriod(event.target.value)}><option>Últimos 12 meses</option><option>Este mês</option><option>Este trimestre</option><option>Personalizado</option></select><ChevronDown size={14} /></div>{period === 'Personalizado' && <><input type="date" value={customFrom} onChange={event => setCustomFrom(event.target.value)} className="custom-date" aria-label="Data inicial" /><input type="date" value={customTo} onChange={event => setCustomTo(event.target.value)} className="custom-date" aria-label="Data final" /></>}{active !== 'Receitas' && active !== 'Despesas' && <button className="primary-btn" onClick={() => setShowModal(true)}><Plus size={16} /> Novo projeto</button>}</div>}</section>
         {error && <div className="login-error">{error}</div>}
-        {active === 'Receitas' ? <FinancePage kind="revenue" projects={projects} search={search} filters={filters} /> : active === 'Despesas' ? <FinancePage kind="expense" projects={projects} search={search} filters={filters} /> : active === 'Fluxo de caixa' ? <CashflowPage filters={filters} /> : active !== 'Visão geral' && active !== 'Projetos' ? <section className="empty-state panel"><div className="empty-icon"><BriefcaseBusiness size={24} /></div><h2>{active}</h2><p>Módulo em desenvolvimento.</p><button className="secondary-btn" onClick={() => setActive('Visão geral')}>Voltar para visão geral</button></section> : <>
+        {active === 'Receitas' ? <FinancePage kind="revenue" projects={projects} search={search} filters={filters} /> : active === 'Despesas' ? <FinancePage kind="expense" projects={projects} search={search} filters={filters} /> : active === 'Fluxo de caixa' ? <CashflowPage filters={filters} /> : active === 'Configurações' ? <SettingsPage /> : active !== 'Visão geral' && active !== 'Projetos' ? <section className="empty-state panel"><div className="empty-icon"><BriefcaseBusiness size={24} /></div><h2>{active}</h2><p>Módulo em desenvolvimento.</p><button className="secondary-btn" onClick={() => setActive('Visão geral')}>Voltar para visão geral</button></section> : <>
           {active === 'Visão geral' && <>
             <div className="kpi-grid"><Kpi label="Projetos" value={String(summary.projects)} icon={FolderKanban} /><Kpi label="Receita total" value={money(summary.revenue)} icon={CircleDollarSign} /><Kpi label="Despesas" value={money(summary.expense)} icon={CreditCard} /><Kpi label="Lucro líquido" value={money(summary.profit)} positive={summary.profit >= 0} icon={BarChart3} /><Kpi label="ROI geral" value={summary.expense > 0 ? `${summary.roi.toFixed(1)}%` : '—'} positive={summary.roi >= 0} icon={Gauge} /></div>
             <div className="dashboard-grid"><section className="panel chart-panel"><div className="panel-head"><div><h2>Receita, despesa e lucro por mês</h2><p>Últimos 12 meses, por competência</p></div>{trend === 'up' ? <span className="trend positive"><ArrowUpRight size={14} /> Lucro em alta</span> : trend === 'down' ? <span className="trend negative"><ArrowDownRight size={14} /> Lucro em queda</span> : <span className="trend"><span style={{ color: 'var(--muted)' }}>Lucro estável</span></span>}</div>{months.length ? <MonthlyChart months={months} /> : <div className="empty-state"><div className="empty-icon"><BarChart3 size={24} /></div><h2>Sem movimentações financeiras</h2><p>Cadastre receitas e despesas para acompanhar a evolução financeira.</p></div>}</section><section className="panel insights-panel"><div className="panel-head"><div><h2>Insights</h2><p>Alertas calculados com os dados reais</p></div><span className="ai-spark"><Sparkles size={15} /></span></div>{attentionProject ? <div className="insight warning"><div className="insight-icon"><ShieldAlert size={17} /></div><div><b>Projeto em atenção</b><p>{attentionProject.name} está com margem de {attentionProject.margin.toFixed(1)}%.</p></div></div> : opportunityProject ? <div className="insight opportunity"><div className="insight-icon"><Lightbulb size={17} /></div><div><b>Boa margem identificada</b><p>{opportunityProject.name} apresenta margem de {opportunityProject.margin.toFixed(1)}%.</p></div></div> : <div className="empty-state"><p>Cadastre movimentações financeiras para gerar insights.</p></div>}</section></div>
