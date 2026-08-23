@@ -10,6 +10,7 @@ class CreateProjectDto {
   @IsOptional() @IsString() description?: string
   @IsOptional() @IsString() color?: string
   @IsOptional() @IsIn(['IDEA','DEVELOPMENT','MVP','LAUNCHED','SCALING','PAUSED','CLOSED']) status?: string
+  @IsOptional() @Transform(({ value }) => typeof value === 'string' ? (value.trim() || null) : value) @IsString() url?: string | null
 }
 
 @Controller('projects')

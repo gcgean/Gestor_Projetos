@@ -105,7 +105,7 @@ function ConfirmDialog({ title, message, confirmLabel, onConfirm, onCancel }: { 
   </div>
 }
 
-type ProjectFormData = { name: string; type: string; description: string; status: string }
+type ProjectFormData = { name: string; type: string; description: string; status: string; url: string }
 
 function ProjectModal({ title, submitLabel, initial, saving, error, onSubmit, onClose }: {
   title: string; submitLabel: string; initial: ProjectFormData; saving: boolean; error: string
@@ -119,6 +119,7 @@ function ProjectModal({ title, submitLabel, initial, saving, error, onSubmit, on
       <label>Nome do projeto<input value={data.name} onChange={event => setData({ ...data, name: event.target.value })} placeholder="Ex.: Produto Digital" minLength={2} required autoFocus /></label>
       <label>Tipo<input value={data.type} onChange={event => setData({ ...data, type: event.target.value })} placeholder="Ex.: SaaS, Serviço" required /></label>
       <label>Status<select value={data.status} onChange={event => setData({ ...data, status: event.target.value })}>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+      <label>URL do site (opcional)<input type="url" value={data.url} onChange={event => setData({ ...data, url: event.target.value })} placeholder="https://meuprojeto.com.br" /></label>
       <label>Descrição<input value={data.description} onChange={event => setData({ ...data, description: event.target.value })} placeholder="Opcional" /></label>
       <div className="modal-actions"><button type="button" className="secondary-btn" onClick={onClose}>Cancelar</button><button className="primary-btn" disabled={saving}>{saving ? 'Salvando...' : submitLabel}</button></div>
     </form>
@@ -515,7 +516,7 @@ function App() {
     setSaving(true)
     setError('')
     try {
-      await api.updateProject(editingProject.id, { name, type: data.type, status: data.status, description: data.description || undefined })
+      await api.updateProject(editingProject.id, { name, type: data.type, status: data.status, description: data.description || undefined, url: data.url || null })
       setEditingProject(null)
       await loadData()
     } catch (err) { setError(err instanceof Error ? err.message : 'Não foi possível alterar o projeto.') } finally { setSaving(false) }
@@ -546,12 +547,12 @@ function App() {
             {projects.length > 0 && <ProjectShareChart projects={projects} colorByProjectId={colorByProjectId} />}
             {projectTrend.series.length > 0 && <ProjectTrendChart months={projectTrend.months} series={projectTrend.series} colorByProjectId={colorByProjectId} />}
           </>}
-          <section className="panel projects-panel"><div className="panel-head"><div><h2>Projetos</h2><p>Registros pertencentes ao usuário autenticado</p></div></div><div className="project-table"><div className="table-row table-head"><span>Projeto</span><span>Receita</span><span>Margem</span><span>Despesas</span><span>Status</span><span /></div>{loading ? <div className="empty-state"><p>Carregando dados...</p></div> : filteredProjects.length ? filteredProjects.map(project => <div className="table-row" key={project.id}><div className="project-name"><span className="project-dot" style={{ background: project.color }} /><div><b>{project.name?.trim() || '(sem nome)'}</b><small>{project.type}</small></div></div><span className="table-money">{money(project.revenue)}</span><span className={project.revenue - project.expense < 0 ? 'margin negative' : 'margin'}><b>{money(project.revenue - project.expense)}</b><small>{project.margin.toFixed(1)}%</small></span><span className="table-money">{money(project.expense)}</span><span className="status"><Check size={12} /> {statusLabels[project.status] ?? project.status}</span><span className="table-actions"><button className="row-more" onClick={() => setEditingProject(project)} aria-label="Alterar projeto" title="Alterar projeto"><Pencil size={15} /></button><button className="row-more" onClick={() => setDeletingProject(project)} aria-label="Excluir projeto" title="Excluir projeto"><Trash2 size={15} /></button></span></div>) : <div className="empty-state"><div className="empty-icon"><FolderKanban size={24} /></div><h2>Nenhum projeto cadastrado</h2><p>Crie seu primeiro projeto para começar a acompanhar os dados reais do portfólio.</p><button className="primary-btn" onClick={() => setShowModal(true)}><Plus size={16} /> Novo projeto</button></div>}</div></section>
+          <section className="panel projects-panel"><div className="panel-head"><div><h2>Projetos</h2><p>Registros pertencentes ao usuário autenticado</p></div></div><div className="project-table"><div className="table-row table-head"><span>Projeto</span><span>Receita</span><span>Margem</span><span>Despesas</span><span>Status</span><span /></div>{loading ? <div className="empty-state"><p>Carregando dados...</p></div> : filteredProjects.length ? filteredProjects.map(project => <div className="table-row" key={project.id}><div className="project-name"><span className="project-dot" style={{ background: project.color }} />{project.url && <span className={project.isOnline === false ? 'status-dot offline' : project.isOnline === true ? 'status-dot online' : 'status-dot'} title={project.isOnline === false ? 'Fora do ar' : project.isOnline === true ? 'No ar' : 'Aguardando primeira verificação'} />}<div><b>{project.name?.trim() || '(sem nome)'}</b><small>{project.type}</small></div></div><span className="table-money">{money(project.revenue)}</span><span className={project.revenue - project.expense < 0 ? 'margin negative' : 'margin'}><b>{money(project.revenue - project.expense)}</b><small>{project.margin.toFixed(1)}%</small></span><span className="table-money">{money(project.expense)}</span><span className="status"><Check size={12} /> {statusLabels[project.status] ?? project.status}</span><span className="table-actions"><button className="row-more" onClick={() => setEditingProject(project)} aria-label="Alterar projeto" title="Alterar projeto"><Pencil size={15} /></button><button className="row-more" onClick={() => setDeletingProject(project)} aria-label="Excluir projeto" title="Excluir projeto"><Trash2 size={15} /></button></span></div>) : <div className="empty-state"><div className="empty-icon"><FolderKanban size={24} /></div><h2>Nenhum projeto cadastrado</h2><p>Crie seu primeiro projeto para começar a acompanhar os dados reais do portfólio.</p><button className="primary-btn" onClick={() => setShowModal(true)}><Plus size={16} /> Novo projeto</button></div>}</div></section>
         </>}
       </div>
     </main>
-    {showModal && <ProjectModal title="Novo projeto" submitLabel="Criar projeto" initial={{ name: '', type: '', description: '', status: 'IDEA' }} saving={saving} error={error} onSubmit={createProject} onClose={() => setShowModal(false)} />}
-    {editingProject && <ProjectModal title="Alterar projeto" submitLabel="Salvar alterações" initial={{ name: editingProject.name, type: editingProject.type, description: editingProject.description ?? '', status: editingProject.status }} saving={saving} error={error} onSubmit={saveProjectEdit} onClose={() => setEditingProject(null)} />}
+    {showModal && <ProjectModal title="Novo projeto" submitLabel="Criar projeto" initial={{ name: '', type: '', description: '', status: 'IDEA', url: '' }} saving={saving} error={error} onSubmit={createProject} onClose={() => setShowModal(false)} />}
+    {editingProject && <ProjectModal title="Alterar projeto" submitLabel="Salvar alterações" initial={{ name: editingProject.name, type: editingProject.type, description: editingProject.description ?? '', status: editingProject.status, url: editingProject.url ?? '' }} saving={saving} error={error} onSubmit={saveProjectEdit} onClose={() => setEditingProject(null)} />}
     {deletingProject && <ConfirmDialog title={`Excluir ${deletingProject.name?.trim() || 'projeto'}?`} message="O projeto e seus lançamentos serão excluídos. Esta ação não pode ser desfeita." confirmLabel="Excluir" onConfirm={confirmDeleteProject} onCancel={() => setDeletingProject(null)} />}
   </div>
 }

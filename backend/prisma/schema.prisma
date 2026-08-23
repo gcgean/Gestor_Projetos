@@ -63,6 +63,9 @@ model Project {
   yearlyGoal      Decimal?      @db.Decimal(14, 2)
   initialInvestment Decimal?    @db.Decimal(14, 2)
   startDate       DateTime?
+  url             String?
+  isOnline        Boolean?
+  lastCheckedAt   DateTime?
   ownerId         String
   owner           User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   revenues        Revenue[]

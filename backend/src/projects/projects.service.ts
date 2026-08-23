@@ -25,8 +25,11 @@ export class ProjectsService {
     if (to) range.lte = new Date(`${to}T23:59:59.999Z`)
     return range
   }
-  async update(ownerId: string, id: string, data: { name?: string; type?: string; status?: any; color?: string; description?: string }) {
-    const result = await this.prisma.project.updateMany({ where: { id, ownerId }, data })
+  async update(ownerId: string, id: string, data: { name?: string; type?: string; status?: any; color?: string; description?: string; url?: string | null }) {
+    const current = await this.prisma.project.findFirst({ where: { id, ownerId }, select: { url: true } })
+    if (!current) throw new Error('Projeto não encontrado')
+    const urlChanged = 'url' in data && data.url !== current.url
+    const result = await this.prisma.project.updateMany({ where: { id, ownerId }, data: { ...data, ...(urlChanged ? { isOnline: null, lastCheckedAt: null } : {}) } })
     if (!result.count) throw new Error('Projeto não encontrado')
     return this.prisma.project.findUnique({ where: { id } })
   }
@@ -35,5 +38,5 @@ export class ProjectsService {
     if (!result.count) throw new Error('Projeto não encontrado')
     return { deleted: true }
   }
-  create(ownerId: string, data: { name: string; type: string; status?: any; color?: string; description?: string }) { return this.prisma.project.create({ data: { ...data, ownerId } }) }
+  create(ownerId: string, data: { name: string; type: string; status?: any; color?: string; description?: string; url?: string | null }) { return this.prisma.project.create({ data: { ...data, ownerId } }) }
 }

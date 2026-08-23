@@ -7,6 +7,9 @@ export type ApiProject = {
   status: string
   color: string
   description?: string | null
+  url?: string | null
+  isOnline?: boolean | null
+  lastCheckedAt?: string | null
   revenue: number
   expense: number
   margin: number
@@ -56,7 +59,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export const api = {
   login: (email: string, password: string) => request<{ accessToken: string; user: { id: string; email: string; role: string } }>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
   projects: (filters?: Pick<Filters, 'from' | 'to' | 'category'>) => request<ApiProject[]>(`/projects${query(filters)}`),
-  createProject: (data: Pick<ApiProject, 'name' | 'type'> & Partial<Pick<ApiProject, 'description' | 'color' | 'status'>>) => request<ApiProject>('/projects', { method: 'POST', body: JSON.stringify(data) }),
+  createProject: (data: Pick<ApiProject, 'name' | 'type'> & Partial<Pick<ApiProject, 'description' | 'color' | 'status' | 'url'>>) => request<ApiProject>('/projects', { method: 'POST', body: JSON.stringify(data) }),
   dashboard: (filters?: Filters) => request<{ projects: number; revenue: number; expense: number; profit: number; roi: number }>(`/dashboard/summary${query(filters)}`),
   cashflow: (filters?: Filters) => request<CashflowData>(`/dashboard/cashflow${query(filters)}`),
   monthly: (filters?: Filters) => request<MonthlyData>(`/dashboard/monthly${query(filters)}`),
