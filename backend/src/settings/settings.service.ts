@@ -24,4 +24,10 @@ export class SettingsService {
     if (!user?.telegramBotToken || !user.telegramChatId) return { ok: false, error: 'Configure o token do bot e o chat ID antes de testar.' }
     return this.telegram.sendMessage('✅ Conexão com o Telegram configurada com sucesso no Gestor_Projetos.', { botToken: user.telegramBotToken, chatId: user.telegramChatId })
   }
+
+  async detectChatId(userId: string, overrideToken?: string) {
+    const token = overrideToken || (await this.prisma.user.findUnique({ where: { id: userId }, select: { telegramBotToken: true } }))?.telegramBotToken
+    if (!token) return { ok: false, error: 'Informe o token do bot antes de detectar o chat ID.' }
+    return this.telegram.getLatestChatId(token)
+  }
 }

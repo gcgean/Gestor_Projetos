@@ -30,4 +30,20 @@ export class TelegramService {
       return { ok: false, error: message }
     }
   }
+
+  async getLatestChatId(botToken: string): Promise<{ ok: boolean; chatId?: string; label?: string; error?: string }> {
+    try {
+      const response = await fetch(`https://api.telegram.org/bot${botToken}/getUpdates?limit=1&offset=-1`)
+      const data: any = await response.json().catch(() => null)
+      if (!response.ok || !data?.ok) return { ok: false, error: data?.description || `Telegram respondeu ${response.status}` }
+      const updates: any[] = data.result ?? []
+      if (!updates.length) return { ok: false, error: 'Nenhuma mensagem encontrada. Mande uma mensagem para o bot no Telegram e tente de novo.' }
+      const chat = updates[updates.length - 1]?.message?.chat ?? updates[updates.length - 1]?.my_chat_member?.chat
+      if (!chat) return { ok: false, error: 'Não foi possível identificar o chat na última atualização.' }
+      const label = chat.username ? `@${chat.username}` : (chat.title || chat.first_name || String(chat.id))
+      return { ok: true, chatId: String(chat.id), label }
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) }
+    }
+  }
 }

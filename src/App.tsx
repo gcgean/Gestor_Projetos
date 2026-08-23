@@ -447,6 +447,7 @@ function SettingsPage() {
   const [chatId, setChatId] = useState('')
   const [saving, setSaving] = useState(false)
   const [testing, setTesting] = useState(false)
+  const [detecting, setDetecting] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
 
@@ -478,13 +479,24 @@ function SettingsPage() {
     } catch (err) { setError(err instanceof Error ? err.message : 'Não foi possível testar.') } finally { setTesting(false) }
   }
 
+  async function detect() {
+    setDetecting(true)
+    setError('')
+    setMessage('')
+    try {
+      const result = await api.detectTelegramChatId(botToken || undefined)
+      if (result.ok && result.chatId) { setChatId(result.chatId); setMessage(`Chat detectado: ${result.label ?? result.chatId}`) }
+      else setError(result.error || 'Não foi possível detectar o chat ID.')
+    } catch (err) { setError(err instanceof Error ? err.message : 'Não foi possível detectar o chat ID.') } finally { setDetecting(false) }
+  }
+
   return <section className="panel projects-panel settings-panel">
     <div className="panel-head"><div><h2>Telegram</h2><p>Receba um alerta quando algum projeto com URL cadastrada sair do ar</p></div></div>
     {error && <div className="login-error">{error}</div>}
     {message && <div className="login-success">{message}</div>}
     <form onSubmit={save}>
       <label>Token do bot{settings?.hasToken ? ' (já configurado)' : ''}<input type="password" value={botToken} onChange={event => setBotToken(event.target.value)} placeholder={settings?.hasToken ? 'Deixe em branco para manter o atual' : 'Cole aqui o token do @BotFather'} /></label>
-      <label>Chat ID<input value={chatId} onChange={event => setChatId(event.target.value)} placeholder="Seu chat ID numérico" /></label>
+      <label>Chat ID<div className="chat-id-row"><input value={chatId} onChange={event => setChatId(event.target.value)} placeholder="Seu chat ID numérico" /><button type="button" className="secondary-btn" onClick={detect} disabled={detecting || (!botToken && !settings?.hasToken)}>{detecting ? 'Detectando...' : 'Detectar automaticamente'}</button></div></label>
       <div className="settings-actions">
         <button className="primary-btn" disabled={saving}>{saving ? 'Salvando...' : 'Salvar'}</button>
         <button type="button" className="secondary-btn" onClick={test} disabled={testing || !settings?.hasToken}>{testing ? 'Enviando...' : 'Enviar mensagem de teste'}</button>
@@ -496,8 +508,8 @@ function SettingsPage() {
         <li>No Telegram, fale com <b>@BotFather</b>, mande <code>/newbot</code> e siga as instruções.</li>
         <li>Copie o token que ele te der e cole no campo acima.</li>
         <li>Procure pelo seu bot no Telegram e mande uma mensagem qualquer para ele (precisa iniciar a conversa primeiro).</li>
-        <li>Acesse <code>https://api.telegram.org/bot&lt;SEU_TOKEN&gt;/getUpdates</code> no navegador e copie o número em <code>"chat":{'{'}"id":...{'}'}</code>.</li>
-        <li>Cole esse número no campo Chat ID acima, clique em Salvar e depois em "Enviar mensagem de teste".</li>
+        <li>Clique em "Detectar automaticamente" para preencher o Chat ID sozinho.</li>
+        <li>Clique em Salvar e depois em "Enviar mensagem de teste" para confirmar.</li>
       </ol>
     </div>
   </section>

@@ -8,6 +8,10 @@ class UpdateTelegramDto {
   @IsOptional() @IsString() chatId?: string | null
 }
 
+class DetectChatIdDto {
+  @IsOptional() @IsString() botToken?: string
+}
+
 @Controller('settings')
 @UseGuards(JwtGuard)
 export class SettingsController {
@@ -15,4 +19,5 @@ export class SettingsController {
   @Get('telegram') getTelegram(@Req() req: any) { return this.settings.getTelegram(req.user.sub) }
   @Put('telegram') updateTelegram(@Req() req: any, @Body() dto: UpdateTelegramDto) { return this.settings.updateTelegram(req.user.sub, dto) }
   @Post('telegram/test') testTelegram(@Req() req: any) { return this.settings.testTelegram(req.user.sub) }
+  @Post('telegram/detect-chat-id') detectChatId(@Req() req: any, @Body() dto: DetectChatIdDto) { return this.settings.detectChatId(req.user.sub, dto.botToken) }
 }

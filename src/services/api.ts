@@ -80,4 +80,5 @@ export const api = {
   getTelegramSettings: () => request<TelegramSettings>('/settings/telegram'),
   updateTelegramSettings: (data: { botToken?: string; chatId?: string }) => request<TelegramSettings>('/settings/telegram', { method: 'PUT', body: JSON.stringify(data) }),
   testTelegram: () => request<{ ok: boolean; error?: string }>('/settings/telegram/test', { method: 'POST' }),
+  detectTelegramChatId: (botToken?: string) => request<{ ok: boolean; chatId?: string; label?: string; error?: string }>('/settings/telegram/detect-chat-id', { method: 'POST', body: JSON.stringify({ botToken }) }),
 }
